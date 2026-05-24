@@ -2,8 +2,39 @@
 #include <algorithm>
 #include <sstream>
 #include <set>
-#include<regex>
+#include<cctype>
 using namespace std;
+
+
+bool isNumber(string s) {
+
+    if(s.empty())
+        return false;
+
+    for(char ch : s) {
+
+        if(!isdigit(ch))
+            return false;
+    }
+
+    return true;
+}
+bool isIdentifier(string s) {
+
+    if(s.empty())
+        return false;
+
+    if(!(isalpha(s[0]) || s[0] == '_'))
+        return false;
+
+    for(int i = 1; i < s.length(); i++) {
+
+        if(!(isalnum(s[i]) || s[i] == '_'))
+            return false;
+    }
+
+    return true;
+}
 
 set<string> mysqlKeywords = {
 
@@ -35,20 +66,58 @@ set<string> mysqlKeywords = {
     "WHEN", "WHERE"
 
 };
-
+set<string> ops = {
+        "+", "-", "*", "/",
+        "=", "==", "!=", "<", ">",
+        "<=", ">=", "&&", "||", "%"
+};
 int main() {
 
     string s;
 
     getline(cin, s);
+    
 
-    stringstream ss(s);
+    string updated = "";
+
+    for(int i = 0; i < s.length(); i++) {
+
+       if(i + 1 < s.length()) {
+
+            string two = s.substr(i, 2);
+
+            if(two == ">=" || two == "<=" ||
+            two == "==" || two == "!=" ||
+            two == "<>") {
+
+            updated += ' ';
+            updated += two;
+            updated += ' ';
+
+            i++; // skip next character
+            continue;
+           }
+        }
+
+        if(s[i] == ',' || s[i] == ';' ||
+           s[i] == '(' || s[i] == ')' ||
+           s[i] == '+' || s[i] == '-' ||
+           s[i] == '*' || s[i] == '/' ||
+           s[i] == '=' || s[i] == '<' ||
+           s[i] == '>') {
+
+           updated += ' ';
+           updated += s[i];
+           updated += ' ';
+        }
+        else {
+           updated += s[i];
+        }
+    }
+
+    stringstream ss(updated);
 
     string word;
-
-    regex identifier("^[a-zA-Z_][a-zA-Z0-9_]*$");
-    regex number("^[0-9]+$");
-
     while(ss >> word) {
 
         string temp = word;
@@ -60,12 +129,12 @@ int main() {
             cout << word << " -> Keyword" << endl;
         }
 
-        else if(regex_match(word, identifier)) {
+        else if(isIdentifier(word)) {
             cout << word << " -> Identifier" << endl;
         }
 
-        else if(regex_match(word, number)) {
-            cout << word << " -> Number" << endl;
+        else if(isNumber(word)){
+             cout << word << " -> Digit" << endl;
         }
 
         else if(word == ",") {
@@ -76,7 +145,10 @@ int main() {
             cout << word << " -> Semicolon" << endl;
         }
 
-        else {
+        else if(ops.count(word)){
+            cout << word << " -> operator" << endl;
+        }
+        else{
             cout << word << " -> Unknown" << endl;
         }
     }
