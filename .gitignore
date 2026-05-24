@@ -1,0 +1,114 @@
+# ==========================================
+# 1. ENVIRONMENT VARIABLES & SECRETS (CRUCIAL)
+# ==========================================
+.env
+.env.local
+.env.dev
+.env.production
+*.pem
+*.key
+*.passwd
+
+# ==========================================
+# 2. SYSTEM FILES (OS SPECIFIC)
+# ==========================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+
+# ==========================================
+# 3. IDEs AND EDITORS
+# ==========================================
+# VS Code
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# IntelliJ / WebStorm / PyCharm
+.idea/
+*.iml
+*.iws
+
+# Eclipse / NetBeans
+.project
+.classpath
+.settings/
+nbproject/
+
+# ==========================================
+# 4. DEPENDENCIES & PACKAGE MANAGERS
+# ==========================================
+# Node.js
+node_modules/
+jspm_packages/
+
+# Python
+venv/
+.venv/
+env/
+ENV/
+lib/
+lib64/
+
+# Ruby
+bin/
+.bundle/
+vendor/bundle/
+
+# PHP
+vendor/
+
+# ==========================================
+# 5. BUILD OUTPUTS & COMPILED CODE
+# ==========================================
+# General build directories
+build/
+dist/
+out/
+target/
+bin/
+obj/
+
+# Language-specific compiled files
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
+*.pyc
+__pycache__/
+
+# ==========================================
+# 6. LOGS, CACHES, & TEMPORARY FILES
+# ==========================================
+*.log
+npm-debug.log*
+yarn-debug.log*
+.npm/
+.eslintcache
+.parcel-cache
+.turbo/
+.pytest_cache/
+.sass-cache/
+
+# ==========================================
+# 7. LARGE DATA & DATABASE FILES
+# ==========================================
+*.db
+*.sqlite
+*.sqlite3
+*.csv
+*.json
+*.tsv
+*.sql
+*.dump
