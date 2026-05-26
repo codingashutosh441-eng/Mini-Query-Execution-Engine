@@ -8,13 +8,41 @@
 using namespace std;
 
 struct Token {
+
     string value;
     string type;
 };
 
 vector<Token> tokens;
+
+vector<string> selectedColumns;
+
+string tableName;
+
+string whereLeft;
+string whereOperator;
+string whereRight;
+
+string errorMessage;
+
 int pos = 0;
+
 bool selectAllColumns = false;
+
+set<string> mysqlKeywords = {
+
+    "SELECT", "FROM", "WHERE",
+    "INSERT", "UPDATE", "DELETE",
+    "ORDER", "BY", "INTO",
+    "VALUES", "SET"
+};
+
+set<string> ops = {
+
+    "+", "-", "*", "/",
+    "=", "==", "!=", "<", ">",
+    "<=", ">=", "%"
+};
 
 bool isNumber(string s) {
 
@@ -47,21 +75,6 @@ bool isIdentifier(string s) {
     return true;
 }
 
-set<string> mysqlKeywords = {
-
-    "SELECT", "FROM", "WHERE",
-    "INSERT", "UPDATE", "DELETE",
-    "ORDER", "BY", "INTO",
-    "VALUES", "SET"
-};
-
-set<string> ops = {
-
-    "+", "-", "*", "/",
-    "=", "==", "!=", "<", ">",
-    "<=", ">=", "%"
-};
-
 bool expect(string val) {
 
     if(pos < tokens.size() &&
@@ -76,32 +89,62 @@ bool expect(string val) {
 
 bool parseColumns() {
 
-    if(pos >= tokens.size())
-        return false;
+    if(pos >= tokens.size()){
+        errorMessage = "Expected column after SELECT";
+        return false;}
 
-    if(tokens[pos].value == "*"){
+    // SELECT *
+    if(tokens[pos].value == "*") {
+
         selectAllColumns = true;
+        selectedColumns.push_back("*");
+
         pos++;
         return true;
     }
 
-    if(tokens[pos].type != "identifier")
-        return false;
+    // first column
+    if(tokens[pos].type != "identifier"){
+        errorMessage = "Expected column after SELECT";
+        return false;}
+
+    selectedColumns.push_back(tokens[pos].value);
 
     pos++;
 
-    while(pos < tokens.size() &&
-          tokens[pos].value == ",") {
+    // additional columns
+    while(pos < tokens.size()) {
 
-        pos++;
+        // comma means next column
+        if(tokens[pos].value == ",") {
+               pos++;
 
-        if(pos >= tokens.size())
+              if(pos >= tokens.size() ||
+                  tokens[pos].type != "identifier") {
+
+                  errorMessage ="Expected column name after comma";
+
+                  return false;
+               }
+
+             selectedColumns.push_back(tokens[pos].value);
+
+              pos++;
+        }
+
+    // FROM means end of column list
+         else if(tokens[pos].value == "FROM") {
+
+            break;
+        }
+
+    // invalid token after column
+         else {
+
+            errorMessage ="Expected comma or FROM after column name";
+
             return false;
-
-        if(tokens[pos].type != "identifier")
-            return false;
-
-        pos++;
+        }
     }
 
     return true;
@@ -111,28 +154,42 @@ bool parseWhere() {
 
     if(pos < tokens.size() &&
        tokens[pos].value == "WHERE") {
+        
 
         pos++;
 
+        // left operand
         if(pos >= tokens.size() ||
-           tokens[pos].type != "identifier")
-            return false;
+           tokens[pos].type != "identifier"){
+            errorMessage = "Expected identifier after WHERE";
+            return false;}
+
+        whereLeft = tokens[pos].value;
 
         pos++;
 
+        // operator
         if(pos >= tokens.size() ||
-           tokens[pos].type != "operator")
-            return false;
+           tokens[pos].type != "operator"){
+            errorMessage ="Expected operator after identifier";
+            return false;}
+
+        whereOperator = tokens[pos].value;
 
         pos++;
 
-        if(pos >= tokens.size())
-            return false;
+        // right operand
+        if(pos >= tokens.size()){
+            errorMessage ="Expected value after operator";
+            return false;}
 
         if(tokens[pos].type != "digit" &&
            tokens[pos].type != "string" &&
-           tokens[pos].type != "identifier")
-            return false;
+           tokens[pos].type != "identifier"){
+            errorMessage ="Expected value after operator";
+            return false;}
+
+        whereRight = tokens[pos].value;
 
         pos++;
     }
@@ -143,34 +200,36 @@ bool parseWhere() {
 bool parseSelect() {
 
     if(!expect("SELECT")) {
-        cout << "Syntax Error : SELECT expected\n";
+
+        errorMessage = "Expected SELECT keyword";
         return false;
     }
 
     if(!parseColumns()) {
-        cout << "Syntax Error : Invalid column list\n";
         return false;
     }
 
     if(!expect("FROM")) {
-        cout << "Syntax Error : FROM expected\n";
+
+        errorMessage = "Expected FROM keyword";
         return false;
     }
 
+    // table name
     if(pos >= tokens.size() ||
        tokens[pos].type != "identifier") {
 
-        cout << "Syntax Error : Table name expected\n";
-        return false;
+       errorMessage = "Expected table name after FROM";
+       return false;
     }
-
+    tableName = tokens[pos].value;
     pos++;
 
     if(!parseWhere()) {
-        cout << "Syntax Error : Invalid WHERE clause\n";
         return false;
     }
 
+    // optional semicolon
     if(pos < tokens.size() &&
        tokens[pos].value == ";") {
 
@@ -178,25 +237,25 @@ bool parseSelect() {
     }
 
     if(pos != tokens.size()) {
-        cout << "Syntax Error : Extra tokens found\n";
+
+        errorMessage = "Unexpected extra tokens";
         return false;
     }
 
     return true;
 }
 
-int main() {
+void tokenizer(string s) {
 
-    string s;
-
-    getline(cin, s);
     string updated = "";
 
     for(int i = 0; i < s.length(); i++) {
 
+        // string literal
         if(s[i] == '\'') {
 
             string str = "'";
+
             i++;
 
             while(i < s.length() &&
@@ -207,10 +266,13 @@ int main() {
             }
 
             str += "'";
+
             updated += " " + str + " ";
+
             continue;
         }
 
+        // two character operators
         if(i + 1 < s.length()) {
 
             string two = s.substr(i, 2);
@@ -223,10 +285,12 @@ int main() {
                 updated += " ";
 
                 i++;
+
                 continue;
             }
         }
 
+        // single character tokens
         if(s[i] == ',' || s[i] == ';' ||
            s[i] == '(' || s[i] == ')' ||
            s[i] == '+' || s[i] == '-' ||
@@ -240,6 +304,7 @@ int main() {
         }
 
         else {
+
             updated += s[i];
         }
     }
@@ -306,6 +371,15 @@ int main() {
             tokens.push_back({word, "unknown"});
         }
     }
+}
+
+int main() {
+
+    string s;
+
+    getline(cin, s);
+
+    tokenizer(s);
 
     cout << "\nTOKENS\n\n";
 
@@ -321,12 +395,45 @@ int main() {
 
     if(parseSelect()) {
 
-        cout << "Valid SELECT Query\n";
+        cout << "Parsed Query\n";
+
+        cout << "\nColumns:\n ";
+
+        if(selectAllColumns) {
+
+            cout << "*\n";
+        }
+
+        else {
+
+            for(int i = 0; i < selectedColumns.size(); i++) {
+
+                cout << selectedColumns[i] << endl;
+
+            }
+        }
+
+        cout << endl;
+        cout << "\nTable: \n" << tableName << endl;
+
+        if(whereLeft != "") {
+
+            cout << "\nCondition:\n";
+
+            cout << "left = "
+                 << whereLeft << endl;
+
+            cout << "operator = "
+                 << whereOperator << endl;
+
+            cout << "right = "
+                 << whereRight << endl;
+       }
     }
 
     else {
 
-        cout << "Invalid Query\n";
+        cout << "Syntax Error : " << errorMessage << endl;
     }
 
     return 0;
