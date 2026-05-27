@@ -96,3 +96,47 @@ A boolean function that checks whether the query contains the `WHERE` keyword.
 This helps validate conditions applied to table columns.
 
 ---
+
+
+# Day 3
+
+Implemented a basic SQL SELECT query parser with syntax validation and structured query extraction.
+
+## Features Added
+
+- Parsing SELECT queries
+- Column list parsing
+  - `SELECT *`
+  - Multiple columns
+- FROM clause parsing
+- WHERE clause parsing
+  - Supports:
+    - `=`
+    - `==`
+    - `!=`
+    - `<`
+    - `>`
+    - `<=`
+    - `>=`
+- Structured query output
+
+## Example Supported Queries
+
+```sql
+SELECT * FROM students;
+
+SELECT name, age FROM students;
+
+SELECT name FROM students WHERE age >= 18;
+
+Parsed Query
+
+Columns:
+name
+age
+
+Table:
+students
+
+Condition:
+age >= 18
