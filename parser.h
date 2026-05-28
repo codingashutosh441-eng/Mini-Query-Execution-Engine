@@ -1,28 +1,34 @@
 #ifndef PARSER_H
 #define PARSER_H
 
-#include <iostream>
-#include <vector>
-#include <string>
-
-using namespace std;
-
 #include "tokenizer.h"
 #include "ast.h"
 
-extern string errorMessage;
+class Parser
+{
+private:
 
-extern int pos;
+    const vector<Token> tokens;
 
-extern QueryNode *root;
+    size_t pos = 0;
 
-// parser functions
-bool expect(string val);
+    string errorMessage;
 
-QueryNode* parseColumns();
+    bool match(string expected);
 
-bool parseWhere();
+    bool parseColumns(QueryNode* query);
 
-bool parseSelect();
+    bool parseTable(QueryNode* query);
+
+    bool parseWhere(QueryNode* query);
+
+public:
+
+    Parser(const vector<Token> tokenStream);
+
+    QueryNode* parseSelect();
+
+    string getError();
+};
 
 #endif

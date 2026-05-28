@@ -42,7 +42,7 @@ bool isIdentifier(string s)
     if(!(isalpha(s[0]) || s[0] == '_'))
         return false;
 
-    for(int i = 1; i < s.length(); i++)
+    for(size_t i = 1; i < s.length(); i++)
     {
         if(!(isalnum(s[i]) || s[i] == '_'))
             return false;
@@ -53,11 +53,12 @@ bool isIdentifier(string s)
 
 void tokenizer(string s)
 {
+    tokens.clear();
+
     string updated = "";
 
-    for(int i = 0; i < s.length(); i++)
+    for(size_t i = 0; i < s.length(); i++)
     {
-        // string literal
         if(s[i] == '\'')
         {
             string str = "'";
@@ -78,7 +79,6 @@ void tokenizer(string s)
             continue;
         }
 
-        // two character operators
         if(i + 1 < s.length())
         {
             string two = s.substr(i, 2);
@@ -96,7 +96,6 @@ void tokenizer(string s)
             }
         }
 
-        // single character tokens
         if(s[i] == ',' || s[i] == ';' ||
            s[i] == '(' || s[i] == ')' ||
            s[i] == '+' || s[i] == '-' ||
@@ -146,7 +145,8 @@ void tokenizer(string s)
                 {word, "digit"});
         }
 
-        else if(word.front() == '\'' &&
+        else if(!word.empty() &&
+                word.front() == '\'' &&
                 word.back() == '\'')
         {
             tokens.push_back(

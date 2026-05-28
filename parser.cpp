@@ -1,15 +1,21 @@
 #include "parser.h"
 
-string errorMessage;
+Parser::Parser(const vector<Token> tokenStream): tokens(tokenStream)
+{}
 
-int pos = 0;
-
-QueryNode *root = nullptr;
-
-bool expect(string val)
+string Parser::getError()
 {
-    if (pos < tokens.size() &&
-        tokens[pos].value == val)
+    return errorMessage;
+}
+
+bool Parser::match(string expected)
+{
+    if(pos >= tokens.size())
+    {
+        return false;
+    }
+
+    if(tokens[pos].value == expected)
     {
         pos++;
         return true;
@@ -18,239 +24,206 @@ bool expect(string val)
     return false;
 }
 
-QueryNode* parseColumns()
+bool Parser::parseColumns(QueryNode* query)
 {
-    QueryNode* columnsNode =
-        createNode("Columns");
+    ColumnNode* columns =
+        new ColumnNode();
 
     if(pos >= tokens.size())
     {
         errorMessage =
-            "Expected column after SELECT";
+            "Expected column name";
 
-        return nullptr;
+        return false;
     }
 
-    // SELECT *
     if(tokens[pos].value == "*")
     {
-        columnsNode->children.push_back(
-            createNode("Column", "*"));
+        columns->selectAll = true;
 
         pos++;
 
-        return columnsNode;
+        query->columns = columns;
+
+        return true;
     }
 
-    // first column
-    if(tokens[pos].type != "identifier")
-    {
-        errorMessage =
-            "Expected column after SELECT";
-
-        return nullptr;
-    }
-
-    columnsNode->children.push_back(
-        createNode("Column",
-                   tokens[pos].value));
-
-    pos++;
-
-    // additional columns
     while(pos < tokens.size())
     {
-        if(tokens[pos].value == ",")
+        if(tokens[pos].type != "identifier")
         {
-            pos++;
+            errorMessage =
+                "Expected column name";
 
-            if(pos >= tokens.size() ||
-               tokens[pos].type != "identifier")
-            {
-                errorMessage =
-                    "Expected column name after comma";
-
-                return nullptr;
-            }
-
-            columnsNode->children.push_back(
-                createNode("Column",
-                           tokens[pos].value));
-
-            pos++;
+            return false;
         }
 
-        else if(tokens[pos].value == "FROM")
+        columns->columns.push_back(
+            tokens[pos].value);
+
+        pos++;
+
+        if(pos < tokens.size() &&
+           tokens[pos].value == ",")
         {
-            break;
+            pos++;
         }
 
         else
         {
-            errorMessage =
-                "Expected comma or FROM after column name";
-
-            return nullptr;
+            break;
         }
     }
 
-    return columnsNode;
-}
-
-bool parseWhere()
-{
-    if (pos < tokens.size() &&
-        tokens[pos].value == "WHERE")
-    {
-        pos++;
-
-        // left operand
-        if (pos >= tokens.size() ||
-            tokens[pos].type != "identifier")
-        {
-            errorMessage =
-                "Expected identifier after WHERE";
-
-            return false;
-        }
-
-        string whereLeft =
-            tokens[pos].value;
-
-        pos++;
-
-        // operator
-        if (pos >= tokens.size() ||
-            tokens[pos].type != "operator")
-        {
-            errorMessage =
-                "Expected operator after identifier";
-
-            return false;
-        }
-
-        string whereOperator =
-            tokens[pos].value;
-
-        pos++;
-
-        // right operand
-        if (pos >= tokens.size())
-        {
-            errorMessage =
-                "Expected value after operator";
-
-            return false;
-        }
-
-        if (tokens[pos].type != "digit" &&
-            tokens[pos].type != "string" &&
-            tokens[pos].type != "identifier")
-        {
-            errorMessage =
-                "Expected value after operator";
-
-            return false;
-        }
-
-        string whereRight =
-            tokens[pos].value;
-
-        pos++;
-
-        // BUILD CONDITION NODE
-        QueryNode *conditionNode =
-            createNode("Comparison");
-
-        conditionNode->children.push_back(
-            createNode("Identifier",
-                       whereLeft));
-
-        conditionNode->children.push_back(
-            createNode("Operator",
-                       whereOperator));
-
-        conditionNode->children.push_back(
-            createNode("Value",
-                       whereRight));
-
-        root->children.push_back(
-            conditionNode);
-    }
+    query->columns = columns;
 
     return true;
 }
 
-bool parseSelect()
+bool Parser::parseTable(QueryNode* query)
 {
-    // CREATE ROOT QUERY NODE
-    root = createNode("Query");
-
-    if (!expect("SELECT"))
+    if(pos >= tokens.size() ||
+       tokens[pos].type != "identifier")
     {
         errorMessage =
-            "Expected SELECT keyword";
+            "Expected table name";
 
         return false;
     }
 
-    QueryNode* columnsNode =
-        parseColumns();
+    TableNode* table =
+        new TableNode();
 
-    if(columnsNode == nullptr)
-    {
-        return false;
-    }
+    table->tableName =
+        tokens[pos].value;
 
-    root->children.push_back(
-        columnsNode);
-
-    if (!expect("FROM"))
-    {
-        errorMessage =
-            "Expected FROM keyword";
-
-        return false;
-    }
-
-    // table name
-    if (pos >= tokens.size() ||
-        tokens[pos].type != "identifier")
-    {
-        errorMessage =
-            "Expected table name after FROM";
-
-        return false;
-    }
-
-    QueryNode *tableNode =
-        createNode("Table",
-                   tokens[pos].value);
-
-    root->children.push_back(
-        tableNode);
+    query->table = table;
 
     pos++;
 
-    if (!parseWhere())
+    return true;
+}
+
+bool Parser::parseWhere(QueryNode* query)
+{
+    if(pos >= tokens.size())
     {
-        return false;
+        return true;
     }
 
-    // optional semicolon
-    if (pos < tokens.size() &&
-        tokens[pos].value == ";")
+    if(tokens[pos].value != "WHERE")
     {
-        pos++;
+        return true;
     }
 
-    if (pos != tokens.size())
+    pos++;
+
+    ConditionNode* condition =
+        new ConditionNode();
+
+    if(pos >= tokens.size() ||
+       tokens[pos].type != "identifier")
     {
         errorMessage =
-            "Unexpected extra tokens";
+            "Expected identifier in WHERE";
 
         return false;
     }
 
+    condition->left =
+        tokens[pos].value;
+
+    pos++;
+
+    if(pos >= tokens.size() ||
+       tokens[pos].type != "operator")
+    {
+        errorMessage =
+            "Expected operator in WHERE";
+
+        return false;
+    }
+
+    condition->op =
+        tokens[pos].value;
+
+    pos++;
+
+    if(pos >= tokens.size())
+    {
+        errorMessage =
+            "Expected value in WHERE";
+
+        return false;
+    }
+
+    if(tokens[pos].type != "identifier" &&
+        tokens[pos].type != "digit" &&
+        tokens[pos].type != "string")
+        {
+           errorMessage ="Expected valid value in WHERE";
+
+           return false;
+        }
+
+    condition->right =
+        tokens[pos].value;
+
+    pos++;
+
+    query->condition = condition;
+
     return true;
+}
+
+QueryNode* Parser::parseSelect()
+{
+    QueryNode* query =
+        new QueryNode();
+
+    if(!match("SELECT"))
+    {
+        errorMessage =
+            "Expected SELECT";
+
+        return nullptr;
+    }
+
+    if(!parseColumns(query))
+    {
+        freeQuery(query);
+        return nullptr;
+    }
+
+    if(!match("FROM"))
+    {
+        errorMessage =
+            "Expected FROM";
+        freeQuery(query);
+        return nullptr;
+    }
+
+    if(!parseTable(query))
+    {
+        freeQuery(query);
+        return nullptr;
+    }
+
+    if(!parseWhere(query))
+    {
+        freeQuery(query);
+        return nullptr;
+    }
+
+    if(pos >= tokens.size() ||
+        tokens[pos].value != ";"){
+        errorMessage ="Expected semicolon";
+
+        freeQuery(query);
+
+        return nullptr;
+    }  
+    pos++;
+
+    return query;
 }

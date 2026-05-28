@@ -140,3 +140,40 @@ students
 
 Condition:
 age >= 18
+
+#Day 4
+Implemented Abstract Syntax Tree (AST) generation for SQL queries.
+Refactored parser into modular architecture with tokenizer, parser, and AST files.
+Parser now directly builds tree-based query representations instead of storing flat parsed values.
+
+SELECT name, age FROM students WHERE age >= 18;
+
+TOKENS
+
+SELECT -> keyword
+name -> identifier
+, -> comma
+age -> identifier
+FROM -> keyword
+students -> identifier
+WHERE -> keyword
+age -> identifier
+>= -> operator
+18 -> digit
+; -> semicolon
+
+PARSING RESULT
+
+Parsed Query
+
+AST TREE
+
+Query
+  Columns
+    Column: name
+    Column: age
+  Table: students
+  Comparison
+    Identifier: age
+    Operator: >=
+    Value: 18

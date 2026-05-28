@@ -1,42 +1,72 @@
 #include "ast.h"
 
-QueryNode* createNode(
-    string type,
-    string value)
+void printTree(QueryNode* root)
 {
-    QueryNode* node =
-        new QueryNode();
+    if(root == nullptr)
+    {
+        return;
+    }
 
-    node->type = type;
-    node->value = value;
+    cout << "Query" << endl;
 
-    return node;
+    if(root->columns != nullptr)
+    {
+        cout << "  Columns" << endl;
+
+        if(root->columns->selectAll)
+        {
+            cout << "    Column: *" << endl;
+        }
+
+        else
+        {
+            for(string column :
+                root->columns->columns)
+            {
+                cout << "    Column: "
+                     << column
+                     << endl;
+            }
+        }
+    }
+
+    if(root->table != nullptr)
+    {
+        cout << "  Table: "
+             << root->table->tableName
+             << endl;
+    }
+
+    if(root->condition != nullptr)
+    {
+        cout << "  Condition" << endl;
+
+        cout << "    Left: "
+             << root->condition->left
+             << endl;
+
+        cout << "    Operator: "
+             << root->condition->op
+             << endl;
+
+        cout << "    Right: "
+             << root->condition->right
+             << endl;
+    }
 }
 
-void printTree(
-    QueryNode* node,
-    int depth)
+void freeQuery(QueryNode* query)
 {
-    for(int i = 0; i < depth; i++)
+    if(query == nullptr)
     {
-        cout << "  ";
+        return;
     }
 
-    cout << node->type;
+    delete query->columns;
 
-    if(node->value != "")
-    {
-        cout << ": "
-             << node->value;
-    }
+    delete query->table;
 
-    cout << endl;
+    delete query->condition;
 
-    for(QueryNode* child :
-        node->children)
-    {
-        printTree(
-            child,
-            depth + 1);
-    }
+    delete query;
 }

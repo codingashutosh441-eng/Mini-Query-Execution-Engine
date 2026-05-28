@@ -7,21 +7,35 @@
 
 using namespace std;
 
-struct QueryNode
+struct ColumnNode
 {
-    string type;
-    string value;
+    vector<string> columns;
 
-    vector<QueryNode*> children;
+    bool selectAll = false;
 };
 
-// AST functions
-QueryNode* createNode(
-    string type,
-    string value = "");
+struct TableNode
+{
+    string tableName;
+};
 
-void printTree(
-    QueryNode* node,
-    int depth = 0);
+struct ConditionNode
+{
+    string left;
+    string op;
+    string right;
+};
+
+struct QueryNode
+{
+    ColumnNode* columns = nullptr;
+
+    TableNode* table = nullptr;
+
+    ConditionNode* condition = nullptr;
+};
+
+void printTree(QueryNode* root);
+void freeQuery(QueryNode* root);
 
 #endif
