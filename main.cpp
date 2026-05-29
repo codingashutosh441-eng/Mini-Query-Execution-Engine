@@ -3,7 +3,8 @@
 #include "ast.h"
 #include "planner.h"
 #include "analyzer.h"
-
+#include "database.h"
+#include "executor.h"
 
 int main()
 {
@@ -11,18 +12,20 @@ int main()
 
     getline(cin, s);
 
-    if(s.empty())
+    if (s.empty())
     {
         cout << "Empty query" << endl;
 
         return 0;
     }
+    Database db;
+    db.seedStudents();
 
     tokenizer(s);
 
     cout << "\nTOKENS\n\n";
 
-    for(const auto &t : tokens)
+    for (const auto &t : tokens)
     {
         cout << t.value
              << " -> "
@@ -32,12 +35,12 @@ int main()
 
     Parser parser(tokens);
 
-    QueryNode* query =
+    QueryNode *query =
         parser.parseSelect();
 
     cout << "\nPARSING RESULT\n\n";
 
-    if(query != nullptr)
+    if (query != nullptr)
     {
         cout << "Parsed Query\n";
 
@@ -46,24 +49,25 @@ int main()
         printTree(query);
 
         SemanticAnalyzer analyzer;
-        if(!analyzer.validate(query))
+        if (!analyzer.validate(query))
         {
-           cout << "\nSemantic Error : "
-                << analyzer.errorMessage
-                << endl;
+            cout << "\nSemantic Error : "
+                 << analyzer.errorMessage
+                 << endl;
 
-             freeQuery(query);
+            freeQuery(query);
 
-             return 0;
-         }
+            return 0;
+        }
 
         Planner planner;
-
         planner.createPlan(query);
-
         planner.printPlan();
+        Executor executor(&db);
+        executor.execute(query);
 
         freeQuery(query);
+
     }
 
     else
