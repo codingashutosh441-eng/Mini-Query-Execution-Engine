@@ -1,27 +1,27 @@
 #include "ast.h"
 
-void printTree(QueryNode* root)
+void printTree(QueryNode *root)
 {
-    if(root == nullptr)
+    if (root == nullptr)
     {
         return;
     }
 
     cout << "Query" << endl;
 
-    if(root->columns != nullptr)
+    if (root->columns != nullptr)
     {
         cout << "  Columns" << endl;
 
-        if(root->columns->selectAll)
+        if (root->columns->selectAll)
         {
             cout << "    Column: *" << endl;
         }
 
         else
         {
-            for(string column :
-                root->columns->columns)
+            for (string column :
+                 root->columns->columns)
             {
                 cout << "    Column: "
                      << column
@@ -30,34 +30,71 @@ void printTree(QueryNode* root)
         }
     }
 
-    if(root->table != nullptr)
+    if (root->table != nullptr)
     {
         cout << "  Table: "
              << root->table->tableName
              << endl;
     }
 
-    if(root->condition != nullptr)
+    if (root->whereExpression != nullptr)
     {
-        cout << "  Condition" << endl;
+        cout << "Expression Tree" << endl;
 
-        cout << "    Left: "
-             << root->condition->left
-             << endl;
-
-        cout << "    Operator: "
-             << root->condition->op
-             << endl;
-
-        cout << "    Right: "
-             << root->condition->right
-             << endl;
+        printExpressionTree(
+            root->whereExpression,
+            1);
     }
 }
 
-void freeQuery(QueryNode* query)
+void printExpressionTree(ExpressionNode *node, int level)
 {
-    if(query == nullptr)
+    if (node == nullptr)
+    {
+        return;
+    }
+
+    for (int i = 0; i < level; i++)
+    {
+        cout << "  ";
+    }
+
+    if (node->isLogical)
+    {
+        cout << node->logicalOp << endl;
+    }
+    else
+    {
+        cout
+            << node->column
+            << " "
+            << node->op
+            << " "
+            << node->value
+            << endl;
+    }
+
+    printExpressionTree(node->left, level + 1);
+    printExpressionTree(node->right, level + 1);
+}
+
+void freeExpressionTree(ExpressionNode *node)
+{
+    if (node == nullptr)
+    {
+        return;
+    }
+
+    freeExpressionTree(node->left);
+
+    freeExpressionTree(node->right);
+
+    delete node;
+}
+
+void freeQuery(QueryNode *query)
+{
+    if (query == nullptr)
     {
         return;
     }
@@ -66,7 +103,8 @@ void freeQuery(QueryNode* query)
 
     delete query->table;
 
-    delete query->condition;
+    freeExpressionTree(
+        query->whereExpression);
 
     delete query;
 }

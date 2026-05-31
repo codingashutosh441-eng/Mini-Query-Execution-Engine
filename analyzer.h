@@ -22,6 +22,10 @@ private:
         string tableName,
         string columnName);
 
+    bool validateExpression(
+    ExpressionNode* node,
+    string tableName); 
+
 public:
 
     string errorMessage;

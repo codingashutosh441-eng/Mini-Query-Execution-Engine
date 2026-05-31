@@ -28,6 +28,7 @@ class Planner
 private:
 
     vector<ExecutionStep> steps;
+    string expressionToString(ExpressionNode* node);
 
 public:
 

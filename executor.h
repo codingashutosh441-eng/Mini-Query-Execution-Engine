@@ -7,12 +7,19 @@
 class Executor
 {
 private:
+
     Database* db;
 
-    bool evaluateCondition(Row row,
-                           ConditionNode* condition);
+    bool evaluateLeafCondition(
+        Row row,
+        ExpressionNode* node);
+
+    bool evaluateExpression(
+        Row row,
+        ExpressionNode* node);
 
 public:
+
     Executor(Database* database);
 
     void execute(QueryNode* query);

@@ -1,15 +1,41 @@
 #include "planner.h"
 
-void Planner::createPlan(QueryNode* query)
+string Planner::expressionToString(
+    ExpressionNode *node)
+{
+    if (node == nullptr)
+    {
+        return "";
+    }
+
+    if (!node->isLogical)
+    {
+        return node->column +
+               " " +
+               node->op +
+               " " +
+               node->value;
+    }
+
+    return "(" +
+           expressionToString(node->left) +
+           " " +
+           node->logicalOp +
+           " " +
+           expressionToString(node->right) +
+           ")";
+}
+
+void Planner::createPlan(QueryNode *query)
 {
     steps.clear();
 
-    if(query == nullptr)
+    if (query == nullptr)
     {
         return;
     }
 
-    if(query->table != nullptr)
+    if (query->table != nullptr)
     {
         ExecutionStep step;
 
@@ -21,30 +47,29 @@ void Planner::createPlan(QueryNode* query)
         steps.push_back(step);
     }
 
-    if(query->condition != nullptr)
+    if (query->whereExpression != nullptr)
     {
         ExecutionStep step;
 
         step.type = StepType::FILTER;
 
         step.details =
-            query->condition->left + " " +
-            query->condition->op + " " +
-            query->condition->right;
+            expressionToString(
+                query->whereExpression);
 
         steps.push_back(step);
     }
 
-    if(query->columns != nullptr)
+    if (query->columns != nullptr)
     {
-        if(!query->columns->selectAll)
+        if (!query->columns->selectAll)
         {
             ExecutionStep step;
 
             step.type = StepType::PROJECT;
 
-            for(string column :
-                query->columns->columns)
+            for (string column :
+                 query->columns->columns)
             {
                 step.details +=
                     column + " ";
@@ -61,29 +86,30 @@ void Planner::printPlan()
 
     int stepNumber = 1;
 
-    for(const ExecutionStep& step : steps)
+    for (const ExecutionStep &step : steps)
     {
         cout << stepNumber << ". ";
 
-        if(step.type == StepType::SCAN)
+        if (step.type == StepType::SCAN)
         {
             cout << "SCAN TABLE "
                  << step.details;
         }
 
-        else if(step.type == StepType::FILTER)
+        else if (step.type == StepType::FILTER)
         {
             cout << "FILTER rows where "
                  << step.details;
         }
 
-        else if(step.type == StepType::PROJECT)
+        else if (step.type == StepType::PROJECT)
         {
             cout << "PROJECT columns: "
                  << step.details;
         }
 
-        cout << endl << endl;
+        cout << endl
+             << endl;
 
         stepNumber++;
     }

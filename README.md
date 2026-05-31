@@ -177,3 +177,84 @@ Query
     Identifier: age
     Operator: >=
     Value: 18
+
+
+# Day 4 - Database Layer & Query Execution
+
+## Features Implemented
+
+### In-Memory Database
+Created:
+- `database.h`
+- `database.cpp`
+
+Added:
+- `Database`
+- `Table`
+- `Row`
+
+Sample table:
+
+| id | name  | age |
+|----|-------|-----|
+| 1  | Rahul | 20  |
+| 2  | Amit  | 16  |
+| 3  | Neha  | 22  |
+
+---
+
+### Executor Module
+Created:
+- `executor.h`
+- `executor.cpp`
+
+Implemented:
+- SCAN
+- FILTER
+- PROJECT
+- formatted result output
+
+---
+
+## Supported Queries
+
+```sql
+SELECT name FROM students WHERE age >= 18;
+Supported operators:
+
+>
+<
+>=
+<=
+==
+!=
+Example Output
+RESULT
+
+name
+----------------
+Rahul
+Neha
+
+## Features Added
+
+- In-memory database layer
+- Query executor module
+- SCAN operation
+- FILTER operation
+- PROJECT operation
+- Result table printing
+- Multiple WHERE conditions
+- AND / OR support
+- String condition support
+
+## Supported Queries
+
+```sql
+SELECT name FROM students WHERE age >= 18;
+
+SELECT name FROM students
+WHERE age >= 18 AND age < 25;
+
+SELECT name FROM students
+WHERE name == 'Rahul';

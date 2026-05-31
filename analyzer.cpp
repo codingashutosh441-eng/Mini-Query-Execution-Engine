@@ -1,5 +1,7 @@
 #include "analyzer.h"
 
+#include <sstream>
+
 SemanticAnalyzer::SemanticAnalyzer()
 {
     schema["students"] =
@@ -41,8 +43,42 @@ bool SemanticAnalyzer::columnExists(
     return false;
 }
 
+bool SemanticAnalyzer::validateExpression(
+    ExpressionNode* node,
+    string tableName)
+{
+    if(node == nullptr)
+    {
+        return true;
+    }
+
+    if(node->isLogical)
+    {
+        return validateExpression(
+                   node->left,
+                   tableName)
+               &&
+               validateExpression(
+                   node->right,
+                   tableName);
+    }
+
+    if(!columnExists(
+            tableName,
+            node->column))
+    {
+        errorMessage =
+            "Unknown column in WHERE: " +
+            node->column;
+
+        return false;
+    }
+
+    return true;
+}
+
 bool SemanticAnalyzer::validate(
-    QueryNode* query)
+    QueryNode *query)
 {
     if(query == nullptr)
     {
@@ -69,8 +105,8 @@ bool SemanticAnalyzer::validate(
                 query->columns->columns)
             {
                 if(!columnExists(
-                    tableName,
-                    column))
+                        tableName,
+                        column))
                 {
                     errorMessage =
                         "Unknown column: " +
@@ -82,16 +118,12 @@ bool SemanticAnalyzer::validate(
         }
     }
 
-    if(query->condition != nullptr)
+    if(query->whereExpression != nullptr)
     {
-        if(!columnExists(
-            tableName,
-            query->condition->left))
+        if(!validateExpression(
+                query->whereExpression,
+                tableName))
         {
-            errorMessage =
-                "Unknown column in WHERE: " +
-                query->condition->left;
-
             return false;
         }
     }

@@ -6,28 +6,26 @@
 vector<Token> tokens;
 
 set<string> mysqlKeywords =
-{
-    "SELECT", "FROM", "WHERE",
-    "INSERT", "UPDATE", "DELETE",
-    "ORDER", "BY", "INTO",
-    "VALUES", "SET"
-};
+    {
+        "SELECT", "FROM", "WHERE",
+        "INSERT", "UPDATE", "DELETE",
+        "ORDER", "BY", "INTO",
+        "VALUES", "SET", "AND", "OR"};
 
 set<string> ops =
-{
-    "+", "-", "*", "/",
-    "=", "==", "!=", "<", ">",
-    "<=", ">=", "%"
-};
+    {
+        "+", "-", "*", "/",
+        "=", "==", "!=", "<", ">",
+        "<=", ">=", "%"};
 
 bool isNumber(string s)
 {
-    if(s.empty())
+    if (s.empty())
         return false;
 
-    for(char ch : s)
+    for (char ch : s)
     {
-        if(!isdigit(ch))
+        if (!isdigit(ch))
             return false;
     }
 
@@ -36,15 +34,15 @@ bool isNumber(string s)
 
 bool isIdentifier(string s)
 {
-    if(s.empty())
+    if (s.empty())
         return false;
 
-    if(!(isalpha(s[0]) || s[0] == '_'))
+    if (!(isalpha(s[0]) || s[0] == '_'))
         return false;
 
-    for(size_t i = 1; i < s.length(); i++)
+    for (size_t i = 1; i < s.length(); i++)
     {
-        if(!(isalnum(s[i]) || s[i] == '_'))
+        if (!(isalnum(s[i]) || s[i] == '_'))
             return false;
     }
 
@@ -57,16 +55,16 @@ void tokenizer(string s)
 
     string updated = "";
 
-    for(size_t i = 0; i < s.length(); i++)
+    for (size_t i = 0; i < s.length(); i++)
     {
-        if(s[i] == '\'')
+        if (s[i] == '\'')
         {
             string str = "'";
 
             i++;
 
-            while(i < s.length() &&
-                  s[i] != '\'')
+            while (i < s.length() &&
+                   s[i] != '\'')
             {
                 str += s[i];
                 i++;
@@ -79,12 +77,12 @@ void tokenizer(string s)
             continue;
         }
 
-        if(i + 1 < s.length())
+        if (i + 1 < s.length())
         {
             string two = s.substr(i, 2);
 
-            if(two == ">=" || two == "<=" ||
-               two == "==" || two == "!=")
+            if (two == ">=" || two == "<=" ||
+                two == "==" || two == "!=")
             {
                 updated += " ";
                 updated += two;
@@ -96,12 +94,12 @@ void tokenizer(string s)
             }
         }
 
-        if(s[i] == ',' || s[i] == ';' ||
-           s[i] == '(' || s[i] == ')' ||
-           s[i] == '+' || s[i] == '-' ||
-           s[i] == '*' || s[i] == '/' ||
-           s[i] == '=' || s[i] == '<' ||
-           s[i] == '>')
+        if (s[i] == ',' || s[i] == ';' ||
+            s[i] == '(' || s[i] == ')' ||
+            s[i] == '+' || s[i] == '-' ||
+            s[i] == '*' || s[i] == '/' ||
+            s[i] == '=' || s[i] == '<' ||
+            s[i] == '>')
         {
             updated += " ";
             updated += s[i];
@@ -118,7 +116,7 @@ void tokenizer(string s)
 
     string word;
 
-    while(ss >> word)
+    while (ss >> word)
     {
         string temp = word;
 
@@ -127,61 +125,75 @@ void tokenizer(string s)
                   temp.begin(),
                   ::toupper);
 
-        if(mysqlKeywords.count(temp))
+        // KEYWORDS
+
+        if (mysqlKeywords.count(temp))
         {
             tokens.push_back(
                 {temp, "keyword"});
         }
 
-        else if(isIdentifier(word))
+        // OPERATORS
+
+        else if (ops.count(word))
         {
             tokens.push_back(
-                {word, "identifier"});
+                {word, "operator"});
         }
 
-        else if(isNumber(word))
+        // NUMBERS
+
+        else if (isNumber(word))
         {
             tokens.push_back(
                 {word, "digit"});
         }
 
-        else if(!word.empty() &&
-                word.front() == '\'' &&
-                word.back() == '\'')
+        // STRINGS
+
+        else if (!word.empty() &&
+                 word.front() == '\'' &&
+                 word.back() == '\'')
         {
             tokens.push_back(
                 {word, "string"});
         }
 
-        else if(word == ",")
+        // SYMBOLS
+
+        else if (word == ",")
         {
             tokens.push_back(
                 {word, "comma"});
         }
 
-        else if(word == ";")
+        else if (word == ";")
         {
             tokens.push_back(
                 {word, "semicolon"});
         }
 
-        else if(word == "(")
+        else if (word == "(")
         {
             tokens.push_back(
                 {word, "lparen"});
         }
 
-        else if(word == ")")
+        else if (word == ")")
         {
             tokens.push_back(
                 {word, "rparen"});
         }
 
-        else if(ops.count(word))
+        // IDENTIFIERS
+
+        else if (isIdentifier(word))
         {
             tokens.push_back(
-                {word, "operator"});
+                {word, "identifier"});
         }
+
+        // UNKNOWN
 
         else
         {

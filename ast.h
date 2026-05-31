@@ -19,11 +19,18 @@ struct TableNode
     string tableName;
 };
 
-struct ConditionNode
+struct ExpressionNode
 {
-    string left;
+    bool isLogical = false;
+
+    string logicalOp;
+
+    string column;
     string op;
-    string right;
+    string value;
+
+    ExpressionNode* left = nullptr;
+    ExpressionNode* right = nullptr;
 };
 
 struct QueryNode
@@ -31,11 +38,16 @@ struct QueryNode
     ColumnNode* columns = nullptr;
 
     TableNode* table = nullptr;
-
-    ConditionNode* condition = nullptr;
+    
+    ExpressionNode* whereExpression = nullptr;
 };
 
 void printTree(QueryNode* root);
 void freeQuery(QueryNode* root);
+
+void printExpressionTree(ExpressionNode *node,
+                         int level);
+
+void freeExpressionTree(ExpressionNode *node);
 
 #endif

@@ -50,4 +50,7 @@ void Database::seedStudents()
     insertRow("students", {1, "Rahul", 20});
     insertRow("students", {2, "Amit", 16});
     insertRow("students", {3, "Neha", 22});
+    insertRow("students", {4, "Alex", 28});
+    insertRow("students", {5, "Son", 20});
+    insertRow("students", {6, "Eren", 40});
 }
