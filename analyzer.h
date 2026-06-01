@@ -13,8 +13,17 @@ using namespace std;
 class SemanticAnalyzer
 {
 private:
+    struct ColumnInfo
+    {
+        string name;
+        DataType type;
+    };
 
-    map<string, vector<string>> schema;
+    map<string, vector<ColumnInfo>> schema;
+
+    DataType getColumnType(
+    string tableName,
+    string columnName);
 
     bool tableExists(string tableName);
 
@@ -23,16 +32,19 @@ private:
         string columnName);
 
     bool validateExpression(
-    ExpressionNode* node,
-    string tableName); 
+        ExpressionNode *node,
+        string tableName);
+
+    bool isOperatorValid(
+    DataType type,
+    string op);
 
 public:
-
     string errorMessage;
 
     SemanticAnalyzer();
 
-    bool validate(QueryNode* query);
+    bool validate(QueryNode *query);
 };
 
 #endif

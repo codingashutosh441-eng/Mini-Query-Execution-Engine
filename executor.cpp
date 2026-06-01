@@ -1,5 +1,6 @@
 #include "executor.h"
 #include <iostream>
+#include <cstdlib>
 
 using namespace std;
 
@@ -8,26 +9,23 @@ Executor::Executor(Database* database)
     db = database;
 }
 
+// -----------------------------
 // MAIN EXPRESSION EVALUATION
-bool Executor::evaluateExpression(
-    Row row,
-    ExpressionNode* node)
+// -----------------------------
+bool Executor::evaluateExpression(Row row, ExpressionNode* node)
 {
-    if(node == nullptr)
-    {
+    if (node == nullptr)
         return true;
-    }
 
     // LOGICAL NODE
-    if(node->isLogical)
+    if (node->isLogical)
     {
-        if(node->logicalOp == "AND")
+        if (node->logicalOp == "AND")
         {
             return evaluateExpression(row, node->left) &&
                    evaluateExpression(row, node->right);
         }
-
-        else if(node->logicalOp == "OR")
+        else if (node->logicalOp == "OR")
         {
             return evaluateExpression(row, node->left) ||
                    evaluateExpression(row, node->right);
@@ -40,87 +38,83 @@ bool Executor::evaluateExpression(
     return evaluateLeafCondition(row, node);
 }
 
+// -----------------------------
 // LEAF CONDITION EVALUATION
-bool Executor::evaluateLeafCondition(
-    Row row,
-    ExpressionNode* node)
+// -----------------------------
+bool Executor::evaluateLeafCondition(Row row, ExpressionNode* node)
 {
-    string left = node->column;
-    string op   = node->op;
+    string column = node->column;
+    string op = node->op;
     string right = node->value;
 
-    // STRING COLUMN
-    if(left == "name")
+    // -------------------------
+    // STRING COLUMN HANDLING
+    // -------------------------
+    if (column == "name")
     {
-        string rowValue = row.name;
-        string compareValue = right;
+        string leftValue = row.name;
 
-        // remove quotes if present
-        if(compareValue.size() >= 2 &&
-           compareValue.front() == '\'' &&
-           compareValue.back() == '\'')
+        // remove quotes from string literal
+        if (right.size() >= 2 &&
+            right.front() == '\'' &&
+            right.back() == '\'')
         {
-            compareValue = compareValue.substr(
-                1,
-                compareValue.size() - 2);
+            right = right.substr(1, right.size() - 2);
         }
 
-        if(op == "==")
-        {
-            return rowValue == compareValue;
-        }
+        if (op == "=")
+            return leftValue == right;
 
-        else if(op == "!=")
-        {
-            return rowValue != compareValue;
-        }
+        if (op == "!=")
+            return leftValue != right;
 
+        // invalid operator for string
         return false;
     }
 
-    // INTEGER COLUMNS
-    int rowValue = 0;
-    int compareValue = stoi(right);
+    // -------------------------
+    // INTEGER COLUMN HANDLING
+    // -------------------------
+    int leftValue = 0;
 
-    if(left == "age")
+    if (column == "id")
+        leftValue = row.id;
+    else if (column == "age")
+        leftValue = row.age;
+    else
+        return false;
+
+    int rightValue = 0;
+
+    try
     {
-        rowValue = row.age;
+        rightValue = stoi(right);
+    }
+    catch (...)
+    {
+        return false;
     }
 
-    else if(left == "id")
-    {
-        rowValue = row.id;
-    }
+    // -------------------------
+    // NUMERIC OPERATORS
+    // -------------------------
+    if (op == "=")
+        return leftValue == rightValue;
 
-    if(op == ">")
-    {
-        return rowValue > compareValue;
-    }
+    if (op == "!=")
+        return leftValue != rightValue;
 
-    else if(op == "<")
-    {
-        return rowValue < compareValue;
-    }
+    if (op == ">")
+        return leftValue > rightValue;
 
-    else if(op == ">=")
-    {
-        return rowValue >= compareValue;
-    }
+    if (op == "<")
+        return leftValue < rightValue;
 
-    else if(op == "<=")
-    {
-        return rowValue <= compareValue;
-    }
+    if (op == ">=")
+        return leftValue >= rightValue;
 
-    else if(op == "==")
-    {
-        return rowValue == compareValue;
-    }
-
-    else if(op == "!=")
-    {
-        return rowValue != compareValue;
-    }
+    if (op == "<=")
+        return leftValue <= rightValue;
 
     return false;
 }
@@ -130,10 +124,9 @@ bool Executor::evaluateLeafCondition(
 // -----------------------------
 void Executor::execute(QueryNode* query)
 {
-    Table* table =
-        db->getTable(query->table->tableName);
+    Table* table = db->getTable(query->table->tableName);
 
-    if(table == nullptr)
+    if (!table)
     {
         cout << "Table not found" << endl;
         return;
@@ -141,56 +134,49 @@ void Executor::execute(QueryNode* query)
 
     cout << "\nRESULT\n\n";
 
-    // HEADERS
-    if(query->columns->selectAll)
+    // -------------------------
+    // HEADER
+    // -------------------------
+    if (query->columns->selectAll)
     {
         cout << "id\tname\tage" << endl;
         cout << "------------------------" << endl;
     }
     else
     {
-        for(const auto& column : query->columns->columns)
+        for (const auto& col : query->columns->columns)
         {
-            cout << column << "\t";
+            cout << col << "\t";
         }
         cout << endl;
         cout << "------------------------" << endl;
     }
 
-    // ROWS
-    for(const auto& row : table->rows)
+    // -------------------------
+    // ROW PROCESSING
+    // -------------------------
+    for (const auto& row : table->rows)
     {
-        // FILTER
-        if(!evaluateExpression(row, query->whereExpression))
-        {
+        if (!evaluateExpression(row, query->whereExpression))
             continue;
-        }
 
         // SELECT *
-        if(query->columns->selectAll)
+        if (query->columns->selectAll)
         {
             cout << row.id << "\t"
                  << row.name << "\t"
                  << row.age << endl;
         }
-
-        // PROJECT COLUMNS
         else
         {
-            for(const auto& column : query->columns->columns)
+            for (const auto& col : query->columns->columns)
             {
-                if(column == "id")
-                {
+                if (col == "id")
                     cout << row.id << "\t";
-                }
-                else if(column == "name")
-                {
+                else if (col == "name")
                     cout << row.name << "\t";
-                }
-                else if(column == "age")
-                {
+                else if (col == "age")
                     cout << row.age << "\t";
-                }
             }
             cout << endl;
         }

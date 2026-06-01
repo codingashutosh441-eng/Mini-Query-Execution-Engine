@@ -1,7 +1,8 @@
 #include "parser.h"
 
-Parser::Parser(const vector<Token> tokenStream): tokens(tokenStream)
-{}
+Parser::Parser(const vector<Token> tokenStream) : tokens(tokenStream)
+{
+}
 
 string Parser::getError()
 {
@@ -10,12 +11,12 @@ string Parser::getError()
 
 bool Parser::match(string expected)
 {
-    if(pos >= tokens.size())
+    if (pos >= tokens.size())
     {
         return false;
     }
 
-    if(tokens[pos].value == expected)
+    if (tokens[pos].value == expected)
     {
         pos++;
         return true;
@@ -24,12 +25,12 @@ bool Parser::match(string expected)
     return false;
 }
 
-bool Parser::parseColumns(QueryNode* query)
+bool Parser::parseColumns(QueryNode *query)
 {
-    ColumnNode* columns =
+    ColumnNode *columns =
         new ColumnNode();
 
-    if(pos >= tokens.size())
+    if (pos >= tokens.size())
     {
         errorMessage =
             "Expected column name";
@@ -37,7 +38,7 @@ bool Parser::parseColumns(QueryNode* query)
         return false;
     }
 
-    if(tokens[pos].value == "*")
+    if (tokens[pos].value == "*")
     {
         columns->selectAll = true;
 
@@ -48,9 +49,9 @@ bool Parser::parseColumns(QueryNode* query)
         return true;
     }
 
-    while(pos < tokens.size())
+    while (pos < tokens.size())
     {
-        if(tokens[pos].type != "identifier")
+        if (tokens[pos].type != "identifier")
         {
             errorMessage =
                 "Expected column name";
@@ -63,8 +64,8 @@ bool Parser::parseColumns(QueryNode* query)
 
         pos++;
 
-        if(pos < tokens.size() &&
-           tokens[pos].value == ",")
+        if (pos < tokens.size() &&
+            tokens[pos].value == ",")
         {
             pos++;
         }
@@ -80,10 +81,10 @@ bool Parser::parseColumns(QueryNode* query)
     return true;
 }
 
-bool Parser::parseTable(QueryNode* query)
+bool Parser::parseTable(QueryNode *query)
 {
-    if(pos >= tokens.size() ||
-       tokens[pos].type != "identifier")
+    if (pos >= tokens.size() ||
+        tokens[pos].type != "identifier")
     {
         errorMessage =
             "Expected table name";
@@ -91,7 +92,7 @@ bool Parser::parseTable(QueryNode* query)
         return false;
     }
 
-    TableNode* table =
+    TableNode *table =
         new TableNode();
 
     table->tableName =
@@ -104,25 +105,24 @@ bool Parser::parseTable(QueryNode* query)
     return true;
 }
 
-
-bool Parser::parseWhere(QueryNode* query)
+bool Parser::parseWhere(QueryNode *query)
 {
-    if(pos >= tokens.size())
+    if (pos >= tokens.size())
     {
         return true;
     }
 
-    if(tokens[pos].value != "WHERE")
+    if (tokens[pos].value != "WHERE")
     {
         return true;
     }
 
     pos++;
 
-    ExpressionNode* root =
+    ExpressionNode *root =
         parseExpression();
 
-    if(root == nullptr)
+    if (root == nullptr)
     {
         return false;
     }
@@ -133,14 +133,12 @@ bool Parser::parseWhere(QueryNode* query)
     return true;
 }
 
-
-
-QueryNode* Parser::parseSelect()
+QueryNode *Parser::parseSelect()
 {
-    QueryNode* query =
+    QueryNode *query =
         new QueryNode();
 
-    if(!match("SELECT"))
+    if (!match("SELECT"))
     {
         errorMessage =
             "Expected SELECT";
@@ -148,13 +146,13 @@ QueryNode* Parser::parseSelect()
         return nullptr;
     }
 
-    if(!parseColumns(query))
+    if (!parseColumns(query))
     {
         freeQuery(query);
         return nullptr;
     }
 
-    if(!match("FROM"))
+    if (!match("FROM"))
     {
         errorMessage =
             "Expected FROM";
@@ -162,35 +160,36 @@ QueryNode* Parser::parseSelect()
         return nullptr;
     }
 
-    if(!parseTable(query))
+    if (!parseTable(query))
     {
         freeQuery(query);
         return nullptr;
     }
 
-    if(!parseWhere(query))
+    if (!parseWhere(query))
     {
         freeQuery(query);
         return nullptr;
     }
 
-    if(pos >= tokens.size() ||
-        tokens[pos].value != ";"){
-        errorMessage ="Expected semicolon";
+    if (pos >= tokens.size() ||
+        tokens[pos].value != ";")
+    {
+        errorMessage = "Expected semicolon";
 
         freeQuery(query);
 
         return nullptr;
-    }  
+    }
     pos++;
 
     return query;
 }
 
-ExpressionNode* Parser::parseConditionExpression()
+ExpressionNode *Parser::parseConditionExpression()
 {
-    if(pos >= tokens.size() ||
-       tokens[pos].type != "identifier")
+    if (pos >= tokens.size() ||
+        tokens[pos].type != "identifier")
     {
         errorMessage =
             "Expected identifier";
@@ -203,8 +202,8 @@ ExpressionNode* Parser::parseConditionExpression()
 
     pos++;
 
-    if(pos >= tokens.size() ||
-       tokens[pos].type != "operator")
+    if (pos >= tokens.size() ||
+        tokens[pos].type != "operator")
     {
         errorMessage =
             "Expected operator";
@@ -217,7 +216,7 @@ ExpressionNode* Parser::parseConditionExpression()
 
     pos++;
 
-    if(pos >= tokens.size())
+    if (pos >= tokens.size())
     {
         errorMessage =
             "Expected value";
@@ -225,9 +224,9 @@ ExpressionNode* Parser::parseConditionExpression()
         return nullptr;
     }
 
-    if(tokens[pos].type != "identifier" &&
-       tokens[pos].type != "digit" &&
-       tokens[pos].type != "string")
+    if (tokens[pos].type != "identifier" &&
+        tokens[pos].type != "digit" &&
+        tokens[pos].type != "string")
     {
         errorMessage =
             "Expected valid value";
@@ -235,13 +234,27 @@ ExpressionNode* Parser::parseConditionExpression()
         return nullptr;
     }
 
+    string literalTokenType =
+    tokens[pos].type;
+
     string right =
         tokens[pos].value;
 
     pos++;
 
-    ExpressionNode* node =
+    ExpressionNode *node =
         new ExpressionNode();
+
+    if (literalTokenType == "digit")
+    {
+        node->valueType =
+            DataType::INT;
+    }
+    else
+    {
+        node->valueType =
+            DataType::STRING;
+    }
 
     node->isLogical = false;
 
@@ -254,25 +267,25 @@ ExpressionNode* Parser::parseConditionExpression()
     return node;
 }
 
-ExpressionNode* Parser::parsePrimary()
+ExpressionNode *Parser::parsePrimary()
 {
     // Parenthesized expression
 
-    if(pos < tokens.size() &&
-       tokens[pos].value == "(")
+    if (pos < tokens.size() &&
+        tokens[pos].value == "(")
     {
         pos++;
 
-        ExpressionNode* expr =
+        ExpressionNode *expr =
             parseExpression();
 
-        if(expr == nullptr)
+        if (expr == nullptr)
         {
             return nullptr;
         }
 
-        if(pos >= tokens.size() ||
-           tokens[pos].value != ")")
+        if (pos >= tokens.size() ||
+            tokens[pos].value != ")")
         {
             errorMessage =
                 "Expected ')'";
@@ -290,30 +303,30 @@ ExpressionNode* Parser::parsePrimary()
     return parseConditionExpression();
 }
 
-ExpressionNode* Parser::parseAndExpression()
+ExpressionNode *Parser::parseAndExpression()
 {
-    ExpressionNode* left =
+    ExpressionNode *left =
         parsePrimary();
 
-    if(left == nullptr)
+    if (left == nullptr)
     {
         return nullptr;
     }
 
-    while(pos < tokens.size() &&
-          tokens[pos].value == "AND")
+    while (pos < tokens.size() &&
+           tokens[pos].value == "AND")
     {
         pos++;
 
-        ExpressionNode* right =
+        ExpressionNode *right =
             parsePrimary();
 
-        if(right == nullptr)
+        if (right == nullptr)
         {
             return nullptr;
         }
 
-        ExpressionNode* andNode =
+        ExpressionNode *andNode =
             new ExpressionNode();
 
         andNode->isLogical = true;
@@ -330,31 +343,30 @@ ExpressionNode* Parser::parseAndExpression()
     return left;
 }
 
-
-ExpressionNode* Parser::parseExpression()
+ExpressionNode *Parser::parseExpression()
 {
-    ExpressionNode* left =
+    ExpressionNode *left =
         parseAndExpression();
 
-    if(left == nullptr)
+    if (left == nullptr)
     {
         return nullptr;
     }
 
-    while(pos < tokens.size() &&
-          tokens[pos].value == "OR")
+    while (pos < tokens.size() &&
+           tokens[pos].value == "OR")
     {
         pos++;
 
-        ExpressionNode* right =
+        ExpressionNode *right =
             parseAndExpression();
 
-        if(right == nullptr)
+        if (right == nullptr)
         {
             return nullptr;
         }
 
-        ExpressionNode* orNode =
+        ExpressionNode *orNode =
             new ExpressionNode();
 
         orNode->isLogical = true;

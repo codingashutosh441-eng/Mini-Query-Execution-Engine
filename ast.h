@@ -7,10 +7,15 @@
 
 using namespace std;
 
+enum class DataType
+{
+    INT,
+    STRING
+};
+
 struct ColumnNode
 {
     vector<string> columns;
-
     bool selectAll = false;
 };
 
@@ -22,12 +27,13 @@ struct TableNode
 struct ExpressionNode
 {
     bool isLogical = false;
-
     string logicalOp;
 
     string column;
     string op;
     string value;
+
+    DataType valueType;
 
     ExpressionNode* left = nullptr;
     ExpressionNode* right = nullptr;
@@ -36,18 +42,14 @@ struct ExpressionNode
 struct QueryNode
 {
     ColumnNode* columns = nullptr;
-
     TableNode* table = nullptr;
-    
     ExpressionNode* whereExpression = nullptr;
 };
 
 void printTree(QueryNode* root);
 void freeQuery(QueryNode* root);
 
-void printExpressionTree(ExpressionNode *node,
-                         int level);
-
+void printExpressionTree(ExpressionNode *node, int level);
 void freeExpressionTree(ExpressionNode *node);
 
 #endif

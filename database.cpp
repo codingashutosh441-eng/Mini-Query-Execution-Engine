@@ -1,6 +1,6 @@
 #include "database.h"
 
-// ---------- Table ----------
+// ---------------- Table ----------------
 
 Table::Table(const string &name)
 {
@@ -12,7 +12,30 @@ void Table::insert(const Row &row)
     rows.push_back(row);
 }
 
-// ---------- Database ----------
+// ---------------- Database ----------------
+
+Database::Database()
+{
+    schemas["students"] =
+    {
+        "students",
+        {
+            {"id", DataType::INT},
+            {"name", DataType::STRING},
+            {"age", DataType::INT}
+        }
+    };
+
+    schemas["employees"] =
+    {
+        "employees",
+        {
+            {"id", DataType::INT},
+            {"name", DataType::STRING},
+            {"salary", DataType::INT}
+        }
+    };
+}
 
 void Database::createTable(const string &tableName)
 {
@@ -22,8 +45,7 @@ void Database::createTable(const string &tableName)
     }
 }
 
-void Database::insertRow(const string &tableName,
-                         const Row &row)
+void Database::insertRow(const string &tableName, const Row &row)
 {
     if (tables.find(tableName) == tables.end())
     {
@@ -36,11 +58,40 @@ void Database::insertRow(const string &tableName,
 Table *Database::getTable(const string &tableName)
 {
     if (tables.find(tableName) == tables.end())
-    {
         return nullptr;
-    }
 
     return &tables[tableName];
+}
+
+bool Database::tableExists(const string &tableName)
+{
+    return schemas.count(tableName);
+}
+
+bool Database::columnExists(const string &tableName, const string &columnName)
+{
+    auto &cols = schemas[tableName].columns;
+
+    for (const auto &c : cols)
+    {
+        if (c.name == columnName)
+            return true;
+    }
+
+    return false;
+}
+
+DataType Database::getColumnType(const string &tableName, const string &columnName)
+{
+    auto &cols = schemas[tableName].columns;
+
+    for (const auto &c : cols)
+    {
+        if (c.name == columnName)
+            return c.type;
+    }
+
+    return DataType::STRING;
 }
 
 void Database::seedStudents()

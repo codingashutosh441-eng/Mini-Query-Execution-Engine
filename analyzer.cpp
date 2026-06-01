@@ -2,21 +2,34 @@
 
 #include <sstream>
 
+DataType SemanticAnalyzer::getColumnType(
+    string tableName,
+    string columnName)
+{
+    for (auto column : schema[tableName])
+    {
+        if (column.name == columnName)
+        {
+            return column.type;
+        }
+    }
+
+    return DataType::STRING;
+}
+
 SemanticAnalyzer::SemanticAnalyzer()
 {
     schema["students"] =
-    {
-        "id",
-        "name",
-        "age"
-    };
+        {
+            {"id", DataType::INT},
+            {"name", DataType::STRING},
+            {"age", DataType::INT}};
 
     schema["employees"] =
-    {
-        "id",
-        "name",
-        "salary"
-    };
+        {
+            {"id", DataType::INT},
+            {"name", DataType::STRING},
+            {"salary", DataType::INT}};
 }
 
 bool SemanticAnalyzer::tableExists(
@@ -29,12 +42,12 @@ bool SemanticAnalyzer::columnExists(
     string tableName,
     string columnName)
 {
-    vector<string> columns =
+    vector<ColumnInfo> columns =
         schema[tableName];
 
-    for(string column : columns)
+    for (const ColumnInfo &column : columns)
     {
-        if(column == columnName)
+        if (column.name == columnName)
         {
             return true;
         }
@@ -44,31 +57,65 @@ bool SemanticAnalyzer::columnExists(
 }
 
 bool SemanticAnalyzer::validateExpression(
-    ExpressionNode* node,
+    ExpressionNode *node,
     string tableName)
 {
-    if(node == nullptr)
+    if (node == nullptr)
     {
         return true;
     }
 
-    if(node->isLogical)
+    if (node->isLogical)
     {
         return validateExpression(
                    node->left,
-                   tableName)
-               &&
+                   tableName) &&
                validateExpression(
                    node->right,
                    tableName);
     }
 
-    if(!columnExists(
+    if (!columnExists(
             tableName,
             node->column))
     {
         errorMessage =
             "Unknown column in WHERE: " +
+            node->column;
+
+        return false;
+    }
+    DataType columnType =
+        getColumnType(
+            tableName,
+            node->column);
+
+    if (columnType != node->valueType)
+    {
+        errorMessage =
+            "Type mismatch in WHERE clause: " +
+            node->column;
+
+        return false;
+    }
+    // cout << "Checking operator: "<< node->op << endl;
+
+    if (node->op == "==")
+    {
+        errorMessage =
+            "SQL uses '=' instead of '=='";
+
+        return false;
+    }
+
+    if (!isOperatorValid(
+            columnType,
+            node->op))
+    {
+        errorMessage =
+            "Operator '" +
+            node->op +
+            "' not supported for column: " +
             node->column;
 
         return false;
@@ -80,7 +127,7 @@ bool SemanticAnalyzer::validateExpression(
 bool SemanticAnalyzer::validate(
     QueryNode *query)
 {
-    if(query == nullptr)
+    if (query == nullptr)
     {
         return false;
     }
@@ -88,7 +135,7 @@ bool SemanticAnalyzer::validate(
     string tableName =
         query->table->tableName;
 
-    if(!tableExists(tableName))
+    if (!tableExists(tableName))
     {
         errorMessage =
             "Unknown table: " +
@@ -97,14 +144,14 @@ bool SemanticAnalyzer::validate(
         return false;
     }
 
-    if(query->columns != nullptr)
+    if (query->columns != nullptr)
     {
-        if(!query->columns->selectAll)
+        if (!query->columns->selectAll)
         {
-            for(string column :
-                query->columns->columns)
+            for (string column :
+                 query->columns->columns)
             {
-                if(!columnExists(
+                if (!columnExists(
                         tableName,
                         column))
                 {
@@ -118,9 +165,9 @@ bool SemanticAnalyzer::validate(
         }
     }
 
-    if(query->whereExpression != nullptr)
+    if (query->whereExpression != nullptr)
     {
-        if(!validateExpression(
+        if (!validateExpression(
                 query->whereExpression,
                 tableName))
         {
@@ -129,4 +176,27 @@ bool SemanticAnalyzer::validate(
     }
 
     return true;
+}
+
+bool SemanticAnalyzer::isOperatorValid(
+    DataType type,
+    string op)
+{
+    if (type == DataType::INT)
+    {
+        return op == "=" ||
+               op == "!=" ||
+               op == ">" ||
+               op == "<" ||
+               op == ">=" ||
+               op == "<=";
+    }
+
+    if (type == DataType::STRING)
+    {
+        return op == "=" ||
+               op == "!=";
+    }
+
+    return false;
 }

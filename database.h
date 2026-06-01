@@ -5,8 +5,22 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include "ast.h"
 
 using namespace std;
+
+// ONLY schema types here
+struct ColumnInfo
+{
+    string name;
+    DataType type;
+};
+
+struct TableSchema
+{
+    string tableName;
+    vector<ColumnInfo> columns;
+};
 
 struct Row
 {
@@ -22,7 +36,6 @@ public:
     vector<Row> rows;
 
     Table() = default;
-
     Table(const string &name);
 
     void insert(const Row &row);
@@ -32,14 +45,18 @@ class Database
 {
 private:
     unordered_map<string, Table> tables;
+    unordered_map<string, TableSchema> schemas;
 
 public:
+    Database();
+
     void createTable(const string &tableName);
-
-    void insertRow(const string &tableName,
-                   const Row &row);
-
+    void insertRow(const string &tableName, const Row &row);
     Table *getTable(const string &tableName);
+
+    bool tableExists(const string &tableName);
+    bool columnExists(const string &tableName, const string &columnName);
+    DataType getColumnType(const string &tableName, const string &columnName);
 
     void seedStudents();
 };
