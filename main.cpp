@@ -6,76 +6,117 @@
 #include "database.h"
 #include "executor.h"
 
+#include <iostream>
+#include <string>
+
+using namespace std;
+
+const bool DEBUG_MODE = false;
+
 int main()
 {
     string s;
+    string line;
 
-    getline(cin, s);
+    // Read multiline query until ';'
+    while (getline(cin, line))
+    {
+        s += line;
+        s += " ";
+
+        if (line.find(';') != string::npos)
+        {
+            break;
+        }
+    }
 
     if (s.empty())
     {
         cout << "Empty query" << endl;
-
         return 0;
     }
+
+    // DATABASE SETUP
     Database db;
     db.seedStudents();
 
+    // TOKENIZATION
     tokenizer(s);
 
-    cout << "\nTOKENS\n\n";
-
-    for (const auto &t : tokens)
+    if (DEBUG_MODE)
     {
-        cout << t.value
-             << " -> "
-             << t.type
-             << endl;
+        cout << "\nTOKENS\n\n";
+
+        for (const auto &t : tokens)
+        {
+            cout << t.value
+                 << " -> "
+                 << t.type
+                 << endl;
+        }
     }
 
+    // PARSING
     Parser parser(tokens);
 
     QueryNode *query =
         parser.parseSelect();
 
-    cout << "\nPARSING RESULT\n\n";
-
-    if (query != nullptr)
+    if (query == nullptr)
     {
+        cout << "Syntax Error: "
+             << parser.getError()
+             << endl;
+
+        return 0;
+    }
+
+    if (DEBUG_MODE)
+    {
+        cout << "\nPARSING RESULT\n\n";
+
         cout << "Parsed Query\n";
 
         cout << "\nAST TREE\n\n";
 
         printTree(query);
+    }
 
-        SemanticAnalyzer analyzer;
-        if (!analyzer.validate(query))
-        {
-            cout << "\nSemantic Error : "
-                 << analyzer.errorMessage
-                 << endl;
+    // SEMANTIC ANALYSIS
+    SemanticAnalyzer analyzer(&db);
 
-            freeQuery(query);
-
-            return 0;
-        }
-
-        Planner planner;
-        planner.createPlan(query);
-        planner.printPlan();
-        Executor executor(&db);
-        executor.execute(query);
+    if (!analyzer.validate(query))
+    {
+        cout << "Semantic Error:\n"
+             << analyzer.errorMessage
+             << endl;
 
         freeQuery(query);
 
+        return 0;
     }
 
-    else
+    // QUERY PLANNER
+    Planner planner;
+
+    planner.createPlan(query);
+
+    if (DEBUG_MODE)
     {
-        cout << "Syntax Error : "
-             << parser.getError()
-             << endl;
+        cout << "\nSemantic Analysis Passed\n";
+
+        cout << "\nQUERY PLAN\n\n";
+
+        planner.printPlan();
     }
+
+    // EXECUTION
+    Executor executor(&db);
+
+    executor.execute(query);
+
+    // CLEANUP
+    freeQuery(query);
 
     return 0;
 }

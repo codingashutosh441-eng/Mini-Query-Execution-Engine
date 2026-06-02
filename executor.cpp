@@ -4,6 +4,9 @@
 
 using namespace std;
 
+// -----------------------------
+// Constructor
+// -----------------------------
 Executor::Executor(Database* database)
 {
     db = database;
@@ -45,76 +48,59 @@ bool Executor::evaluateLeafCondition(Row row, ExpressionNode* node)
 {
     string column = node->column;
     string op = node->op;
-    string right = node->value;
+    string value = node->value;
 
-    // -------------------------
-    // STRING COLUMN HANDLING
-    // -------------------------
-    if (column == "name")
+    // =========================
+    // STRING HANDLING
+    // =========================
+    if (node->valueType == DataType::STRING)
     {
-        string leftValue = row.name;
+        string leftValue;
 
-        // remove quotes from string literal
-        if (right.size() >= 2 &&
-            right.front() == '\'' &&
-            right.back() == '\'')
+        if (column == "name")
+            leftValue = row.name;
+        else
+            return false;
+
+        // remove quotes from literal
+        if (value.size() >= 2 &&
+            value.front() == '\'' &&
+            value.back() == '\'')
         {
-            right = right.substr(1, right.size() - 2);
+            value = value.substr(1, value.size() - 2);
         }
 
-        if (op == "=")
-            return leftValue == right;
+        if (op == "=")  return leftValue == value;
+        if (op == "!=") return leftValue != value;
 
-        if (op == "!=")
-            return leftValue != right;
-
-        // invalid operator for string
         return false;
     }
 
-    // -------------------------
-    // INTEGER COLUMN HANDLING
-    // -------------------------
-    int leftValue = 0;
-
-    if (column == "id")
-        leftValue = row.id;
-    else if (column == "age")
-        leftValue = row.age;
-    else
-        return false;
-
-    int rightValue = 0;
-
-    try
+    // =========================
+    // INTEGER HANDLING
+    // =========================
+    if (node->valueType == DataType::INT)
     {
-        rightValue = stoi(right);
-    }
-    catch (...)
-    {
+        int leftValue = 0;
+
+        if (column == "id")
+            leftValue = row.id;
+        else if (column == "age")
+            leftValue = row.age;
+        else
+            return false;
+
+        int rightValue = stoi(value);
+
+        if (op == "=")  return leftValue == rightValue;
+        if (op == "!=") return leftValue != rightValue;
+        if (op == ">")  return leftValue > rightValue;
+        if (op == "<")  return leftValue < rightValue;
+        if (op == ">=") return leftValue >= rightValue;
+        if (op == "<=") return leftValue <= rightValue;
+
         return false;
     }
-
-    // -------------------------
-    // NUMERIC OPERATORS
-    // -------------------------
-    if (op == "=")
-        return leftValue == rightValue;
-
-    if (op == "!=")
-        return leftValue != rightValue;
-
-    if (op == ">")
-        return leftValue > rightValue;
-
-    if (op == "<")
-        return leftValue < rightValue;
-
-    if (op == ">=")
-        return leftValue >= rightValue;
-
-    if (op == "<=")
-        return leftValue <= rightValue;
 
     return false;
 }

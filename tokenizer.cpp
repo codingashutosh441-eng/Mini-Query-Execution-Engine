@@ -15,7 +15,7 @@ set<string> mysqlKeywords =
 set<string> ops =
     {
         "+", "-", "*", "/",
-        "=", "==", "!=", "<", ">",
+        "=", "!=", "<", ">",
         "<=", ">=", "%"};
 
 bool isNumber(string s)

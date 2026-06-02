@@ -5,44 +5,32 @@
 #include <map>
 #include <vector>
 #include <string>
-
 #include "ast.h"
+#include "database.h"
 
 using namespace std;
 
 class SemanticAnalyzer
 {
 private:
-    struct ColumnInfo
-    {
-        string name;
-        DataType type;
-    };
+    Database* db;   // ✅ single source of truth
 
-    map<string, vector<ColumnInfo>> schema;
-
-    DataType getColumnType(
-    string tableName,
-    string columnName);
+    DataType getColumnType(string tableName, string columnName);
 
     bool tableExists(string tableName);
 
-    bool columnExists(
-        string tableName,
-        string columnName);
+    bool columnExists(string tableName, string columnName);
 
-    bool validateExpression(
-        ExpressionNode *node,
-        string tableName);
+    bool validateExpression(ExpressionNode *node, string tableName);
 
-    bool isOperatorValid(
-    DataType type,
-    string op);
+    bool isOperatorValid(DataType type, string op);
+
+    DataType getLiteralType(string value);   // ⭐ NEW
 
 public:
     string errorMessage;
 
-    SemanticAnalyzer();
+    SemanticAnalyzer(Database* database);
 
     bool validate(QueryNode *query);
 };

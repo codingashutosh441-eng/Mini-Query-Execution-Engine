@@ -235,7 +235,7 @@ ExpressionNode *Parser::parseConditionExpression()
     }
 
     string literalTokenType =
-    tokens[pos].type;
+        tokens[pos].type;
 
     string right =
         tokens[pos].value;
@@ -249,6 +249,10 @@ ExpressionNode *Parser::parseConditionExpression()
     {
         node->valueType =
             DataType::INT;
+    }
+    else if (literalTokenType == "string")
+    {
+        node->valueType = DataType::STRING;
     }
     else
     {
