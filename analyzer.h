@@ -13,7 +13,7 @@ using namespace std;
 class SemanticAnalyzer
 {
 private:
-    Database* db;   // ✅ single source of truth
+    Database* db;
 
     DataType getColumnType(string tableName, string columnName);
 
@@ -25,7 +25,7 @@ private:
 
     bool isOperatorValid(DataType type, string op);
 
-    DataType getLiteralType(string value);   // ⭐ NEW
+    DataType getLiteralType(string value);
 
 public:
     string errorMessage;

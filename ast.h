@@ -24,6 +24,17 @@ struct TableNode
     string tableName;
 };
 
+struct OrderByNode
+{
+    string column;
+    string direction;
+};
+
+struct LimitNode
+{
+    int count;
+};
+
 struct ExpressionNode
 {
     bool isLogical = false;
@@ -44,6 +55,9 @@ struct QueryNode
     ColumnNode* columns = nullptr;
     TableNode* table = nullptr;
     ExpressionNode* whereExpression = nullptr;
+
+    OrderByNode* orderBy = nullptr;
+    LimitNode* limit = nullptr;
 };
 
 void printTree(QueryNode* root);

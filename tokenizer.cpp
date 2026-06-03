@@ -6,12 +6,16 @@
 vector<Token> tokens;
 
 set<string> mysqlKeywords =
-    {
-        "SELECT", "FROM", "WHERE",
-        "INSERT", "UPDATE", "DELETE",
-        "ORDER", "BY", "INTO",
-        "VALUES", "SET", "AND", "OR"};
+{
+    "SELECT", "FROM", "WHERE",
+    "INSERT", "UPDATE", "DELETE",
+    "ORDER", "BY", "ASC", "DESC",
+    "LIMIT",
+    "INTO", "VALUES", "SET",
+    "AND", "OR"
+};
 
+        
 set<string> ops =
     {
         "+", "-", "*", "/",

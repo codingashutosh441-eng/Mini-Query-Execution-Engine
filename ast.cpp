@@ -45,6 +45,28 @@ void printTree(QueryNode *root)
             root->whereExpression,
             1);
     }
+
+    if (root->orderBy != nullptr)
+    {
+        cout << "  OrderBy" << endl;
+
+        cout << "    Column: "
+             << root->orderBy->column
+             << endl;
+
+        cout << "    Direction: "
+             << root->orderBy->direction
+             << endl;
+    }
+
+    if (root->limit != nullptr)
+    {
+        cout << "  Limit" << endl;
+
+        cout << "    Count: "
+             << root->limit->count
+             << endl;
+    }
 }
 
 void printExpressionTree(ExpressionNode *node, int level)
@@ -102,6 +124,10 @@ void freeQuery(QueryNode *query)
     delete query->columns;
 
     delete query->table;
+
+    delete query->orderBy;
+
+    delete query->limit;
 
     freeExpressionTree(
         query->whereExpression);

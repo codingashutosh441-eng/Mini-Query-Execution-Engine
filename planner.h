@@ -13,27 +13,25 @@ enum class StepType
 {
     SCAN,
     FILTER,
+    SORT,
+    LIMIT,
     PROJECT
 };
 
 struct ExecutionStep
 {
     StepType type;
-
     string details;
 };
 
 class Planner
 {
 private:
-
     vector<ExecutionStep> steps;
     string expressionToString(ExpressionNode* node);
 
 public:
-
     void createPlan(QueryNode* query);
-
     void printPlan();
 };
 

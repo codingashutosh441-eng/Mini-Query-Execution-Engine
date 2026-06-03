@@ -20,6 +20,8 @@ private:
     bool parseTable(QueryNode *query);
 
     bool parseWhere(QueryNode *query);
+    bool parseOrderBy(QueryNode *query);
+    bool parseLimit(QueryNode *query);
     ExpressionNode *parseConditionExpression();
 
     ExpressionNode *parsePrimary();

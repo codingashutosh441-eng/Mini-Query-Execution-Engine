@@ -27,25 +27,19 @@ bool Parser::match(string expected)
 
 bool Parser::parseColumns(QueryNode *query)
 {
-    ColumnNode *columns =
-        new ColumnNode();
+    ColumnNode *columns = new ColumnNode();
 
     if (pos >= tokens.size())
     {
-        errorMessage =
-            "Expected column name";
-
+        errorMessage = "Expected column name";
         return false;
     }
 
     if (tokens[pos].value == "*")
     {
         columns->selectAll = true;
-
         pos++;
-
         query->columns = columns;
-
         return true;
     }
 
@@ -53,23 +47,17 @@ bool Parser::parseColumns(QueryNode *query)
     {
         if (tokens[pos].type != "identifier")
         {
-            errorMessage =
-                "Expected column name";
-
+            errorMessage = "Expected column name";
             return false;
         }
 
-        columns->columns.push_back(
-            tokens[pos].value);
-
+        columns->columns.push_back(tokens[pos].value);
         pos++;
 
-        if (pos < tokens.size() &&
-            tokens[pos].value == ",")
+        if (pos < tokens.size() && tokens[pos].value == ",")
         {
             pos++;
         }
-
         else
         {
             break;
@@ -77,7 +65,6 @@ bool Parser::parseColumns(QueryNode *query)
     }
 
     query->columns = columns;
-
     return true;
 }
 
@@ -86,20 +73,14 @@ bool Parser::parseTable(QueryNode *query)
     if (pos >= tokens.size() ||
         tokens[pos].type != "identifier")
     {
-        errorMessage =
-            "Expected table name";
-
+        errorMessage = "Expected table name";
         return false;
     }
 
-    TableNode *table =
-        new TableNode();
-
-    table->tableName =
-        tokens[pos].value;
+    TableNode *table = new TableNode();
+    table->tableName = tokens[pos].value;
 
     query->table = table;
-
     pos++;
 
     return true;
@@ -108,41 +89,109 @@ bool Parser::parseTable(QueryNode *query)
 bool Parser::parseWhere(QueryNode *query)
 {
     if (pos >= tokens.size())
+        return true;
+
+    if (tokens[pos].value != "WHERE")
+        return true;
+
+    pos++;
+
+    ExpressionNode *root = parseExpression();
+
+    if (!root)
+        return false;
+
+    query->whereExpression = root;
+    return true;
+}
+
+bool Parser::parseOrderBy(QueryNode *query)
+{
+    if (pos >= tokens.size())
+        return true;
+
+    if (tokens[pos].value != "ORDER")
+        return true;
+
+    pos++;
+
+    if (pos >= tokens.size() || tokens[pos].value != "BY")
+    {
+        errorMessage = "Expected BY after ORDER";
+        return false;
+    }
+
+    pos++;
+
+    if (pos >= tokens.size() || tokens[pos].type != "identifier")
+    {
+        errorMessage = "Expected column name in ORDER BY";
+        return false;
+    }
+
+    OrderByNode *node = new OrderByNode();
+    node->column = tokens[pos].value;
+    pos++;
+
+    // default
+    node->direction = "ASC";
+
+    if (pos < tokens.size())
+    {
+        if (tokens[pos].value == "ASC" || tokens[pos].value == "DESC")
+        {
+            node->direction = tokens[pos].value;
+            pos++;
+        }
+    }
+
+    query->orderBy = node;
+    return true;
+}
+
+bool Parser::parseLimit(QueryNode *query)
+{
+    if (pos >= tokens.size())
     {
         return true;
     }
 
-    if (tokens[pos].value != "WHERE")
+    if (tokens[pos].value != "LIMIT")
     {
         return true;
     }
 
     pos++;
 
-    ExpressionNode *root =
-        parseExpression();
-
-    if (root == nullptr)
+    if (pos >= tokens.size() ||
+        tokens[pos].type != "digit")
     {
+        errorMessage =
+            "Expected number after LIMIT";
+
         return false;
     }
 
-    query->whereExpression =
-        root;
+    LimitNode *node =
+        new LimitNode();
+
+    node->count =
+        stoi(tokens[pos].value);
+
+    pos++;
+
+    query->limit = node;
 
     return true;
 }
 
 QueryNode *Parser::parseSelect()
 {
-    QueryNode *query =
-        new QueryNode();
+    QueryNode *query = new QueryNode();
 
     if (!match("SELECT"))
     {
-        errorMessage =
-            "Expected SELECT";
-
+        errorMessage = "Expected SELECT";
         return nullptr;
     }
 
@@ -154,8 +203,7 @@ QueryNode *Parser::parseSelect()
 
     if (!match("FROM"))
     {
-        errorMessage =
-            "Expected FROM";
+        errorMessage = "Expected FROM";
         freeQuery(query);
         return nullptr;
     }
@@ -172,15 +220,26 @@ QueryNode *Parser::parseSelect()
         return nullptr;
     }
 
+    if (!parseOrderBy(query))
+    {
+        freeQuery(query);
+        return nullptr;
+    }
+
+    if (!parseLimit(query))
+    {
+        freeQuery(query);
+        return nullptr;
+    }
+
     if (pos >= tokens.size() ||
         tokens[pos].value != ";")
     {
         errorMessage = "Expected semicolon";
-
         freeQuery(query);
-
         return nullptr;
     }
+
     pos++;
 
     return query;

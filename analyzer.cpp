@@ -27,7 +27,8 @@ DataType SemanticAnalyzer::getLiteralType(string value)
 
 bool isNumber(const string &s)
 {
-    if (s.empty()) return false;
+    if (s.empty())
+        return false;
 
     for (char c : s)
     {
@@ -36,7 +37,6 @@ bool isNumber(const string &s)
     }
     return true;
 }
-
 
 bool tryCastToInt(const string &value, int &out)
 {
@@ -47,7 +47,7 @@ bool tryCastToInt(const string &value, int &out)
     return true;
 }
 
-SemanticAnalyzer::SemanticAnalyzer(Database* database)
+SemanticAnalyzer::SemanticAnalyzer(Database *database)
 {
     this->db = database;
 }
@@ -98,8 +98,10 @@ bool SemanticAnalyzer::validateExpression(
         {
             errorMessage =
                 "Invalid INT conversion:\n"
-                "Column '" + node->column + "' is INT\n"
-                "Value " + node->value + " cannot be converted to INT";
+                "Column '" +
+                node->column + "' is INT\n"
+                               "Value " +
+                node->value + " cannot be converted to INT";
             return false;
         }
     }
@@ -107,9 +109,11 @@ bool SemanticAnalyzer::validateExpression(
     {
         errorMessage =
             "Type Mismatch:\n"
-            "Column '" + node->column + "' is STRING\n"
-            "Literal '" + node->value + "' is INT\n"
-            "Implicit cast INT → STRING not allowed";
+            "Column '" +
+            node->column + "' is STRING\n"
+                           "Literal '" +
+            node->value + "' is INT\n"
+                          "Implicit cast INT → STRING not allowed";
         return false;
     }
 
@@ -157,6 +161,36 @@ bool SemanticAnalyzer::validate(QueryNode *query)
     {
         if (!validateExpression(query->whereExpression, tableName))
         {
+            return false;
+        }
+    }
+
+    // 🔹 ORDERBY validation
+    if (query->orderBy != nullptr)
+    {
+        if (!columnExists(tableName, query->orderBy->column))
+        {
+            errorMessage =
+                "Unknown column in ORDER BY: " +
+                query->orderBy->column;
+            return false;
+        }
+
+        // normalize direction just in case
+        if (query->orderBy->direction != "ASC" &&
+            query->orderBy->direction != "DESC")
+        {
+            query->orderBy->direction = "ASC";
+        }
+    }
+
+    if (query->limit != nullptr)
+    {
+        if (query->limit->count <= 0)
+        {
+            errorMessage =
+                "LIMIT must be greater than 0";
+
             return false;
         }
     }

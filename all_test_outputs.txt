@@ -1,0 +1,274 @@
+========================================
+TEST: tests/basic/limit_3.sql
+========================================
+
+RESULT
+
+id	name	age
+------------------------
+1	Rahul	20
+2	Amit	16
+3	Neha	22
+
+
+========================================
+TEST: tests/basic/order_by_age_asc.sql
+========================================
+
+RESULT
+
+id	name	age
+------------------------
+2	Amit	16
+1	Rahul	20
+5	Son	20
+3	Neha	22
+4	Alex	28
+6	Eren	40
+
+
+========================================
+TEST: tests/basic/order_by_age_desc.sql
+========================================
+
+RESULT
+
+id	name	age
+------------------------
+6	Eren	40
+4	Alex	28
+3	Neha	22
+1	Rahul	20
+5	Son	20
+2	Amit	16
+
+
+========================================
+TEST: tests/basic/order_by_desc_limit_2.sql
+========================================
+
+RESULT
+
+id	name	age
+------------------------
+6	Eren	40
+4	Alex	28
+
+
+========================================
+TEST: tests/basic/select_all.sql
+========================================
+
+RESULT
+
+id	name	age
+------------------------
+1	Rahul	20
+2	Amit	16
+3	Neha	22
+4	Alex	28
+5	Son	20
+6	Eren	40
+
+
+========================================
+TEST: tests/basic/where_age_gte_18.sql
+========================================
+
+RESULT
+
+id	name	age
+------------------------
+1	Rahul	20
+3	Neha	22
+4	Alex	28
+5	Son	20
+6	Eren	40
+
+
+========================================
+TEST: tests/basic/where_and_condition.sql
+========================================
+
+RESULT
+
+id	name	age
+------------------------
+1	Rahul	20
+
+
+========================================
+TEST: tests/basic/where_name_rahul.sql
+========================================
+
+RESULT
+
+id	name	age
+------------------------
+1	Rahul	20
+
+
+========================================
+TEST: tests/complex/deep_logical_tree.sql
+========================================
+
+RESULT
+
+id	name	age
+------------------------
+1	Rahul	20
+3	Neha	22
+4	Alex	28
+5	Son	20
+6	Eren	40
+
+
+========================================
+TEST: tests/complex/large_expression.sql
+========================================
+
+RESULT
+
+id	name	age
+------------------------
+1	Rahul	20
+3	Neha	22
+4	Alex	28
+5	Son	20
+6	Eren	40
+
+
+========================================
+TEST: tests/complex/nested_condition_order_limit.sql
+========================================
+
+RESULT
+
+id	name	age
+------------------------
+6	Eren	40
+4	Alex	28
+3	Neha	22
+
+
+========================================
+TEST: tests/complex/nested_parentheses.sql
+========================================
+
+RESULT
+
+id	name	age
+------------------------
+1	Rahul	20
+2	Amit	16
+3	Neha	22
+5	Son	20
+
+
+========================================
+TEST: tests/complex/where_order_by.sql
+========================================
+
+RESULT
+
+id	name	age
+------------------------
+6	Eren	40
+4	Alex	28
+3	Neha	22
+
+
+========================================
+TEST: tests/complex/where_order_by_limit.sql
+========================================
+
+RESULT
+
+id	name	age
+------------------------
+6	Eren	40
+4	Alex	28
+
+
+========================================
+TEST: tests/semantic/invalid_int_conversion.sql
+========================================
+Semantic Error:
+Invalid INT conversion:
+Column 'age' is INT
+Value 'abc' cannot be converted to INT
+
+
+========================================
+TEST: tests/semantic/limit_zero.sql
+========================================
+Semantic Error:
+LIMIT must be greater than 0
+
+
+========================================
+TEST: tests/semantic/order_by_unknown_column.sql
+========================================
+Semantic Error:
+Unknown column in ORDER BY: salary
+
+
+========================================
+TEST: tests/semantic/type_mismatch.sql
+========================================
+Semantic Error:
+Invalid INT conversion:
+Column 'age' is INT
+Value 'Rahul' cannot be converted to INT
+
+
+========================================
+TEST: tests/semantic/unknown_column.sql
+========================================
+Semantic Error:
+Unknown column: salary
+
+
+========================================
+TEST: tests/semantic/unknown_table.sql
+========================================
+Semantic Error:
+Unknown table: teachers
+
+
+========================================
+TEST: tests/syntax/invalid_limit_value.sql
+========================================
+Syntax Error: Expected number after LIMIT
+
+
+========================================
+TEST: tests/syntax/missing_column.sql
+========================================
+Syntax Error: Expected column name
+
+
+========================================
+TEST: tests/syntax/missing_limit_value.sql
+========================================
+Syntax Error: Expected number after LIMIT
+
+
+========================================
+TEST: tests/syntax/missing_order_by_column.sql
+========================================
+Syntax Error: Expected column name in ORDER BY
+
+
+========================================
+TEST: tests/syntax/missing_semicolon.sql
+========================================
+Syntax Error: Expected semicolon
+
+
+========================================
+TEST: tests/syntax/missing_table.sql
+========================================
+Syntax Error: Expected table name
+
+
