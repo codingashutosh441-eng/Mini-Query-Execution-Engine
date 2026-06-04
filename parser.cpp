@@ -445,3 +445,153 @@ ExpressionNode *Parser::parseExpression()
 
     return left;
 }
+
+CreateTableNode *Parser::parseCreateTable()
+{
+    if (!match("CREATE"))
+    {
+        errorMessage = "Expected CREATE";
+        return nullptr;
+    }
+
+    if (!match("TABLE"))
+    {
+        errorMessage = "Expected TABLE";
+        return nullptr;
+    }
+
+    CreateTableNode *node =
+        new CreateTableNode();
+
+    if (pos >= tokens.size() ||
+        tokens[pos].type != "identifier")
+    {
+        errorMessage = "Expected table name";
+        delete node;
+        return nullptr;
+    }
+
+    node->tableName = tokens[pos].value;
+    pos++;
+
+    if (!match("("))
+    {
+        errorMessage = "Expected '('";
+        delete node;
+        return nullptr;
+    }
+
+    // Empty table check
+    if (pos < tokens.size() &&
+        tokens[pos].value == ")")
+    {
+        errorMessage =
+            "Table must contain at least one column";
+
+        delete node;
+        return nullptr;
+    }
+
+    unordered_set<string> seenColumns;
+
+    while (true)
+    {
+        ColumnDefinitionNode column;
+
+        if (tokens[pos].value == ")")
+        {
+            errorMessage = "Trailing comma before ')'";
+            delete node;
+            return nullptr;
+        }
+
+        if (pos >= tokens.size() ||
+            tokens[pos].type != "identifier")
+        {
+            errorMessage = "Expected column name";
+            delete node;
+            return nullptr;
+        }
+
+        column.name = tokens[pos].value;
+        pos++;
+
+        if (seenColumns.count(column.name))
+        {
+            errorMessage =
+                "Duplicate column name: " + column.name;
+
+            delete node;
+            return nullptr;
+        }
+
+        seenColumns.insert(column.name);
+
+        if (pos >= tokens.size() ||
+            tokens[pos].type == "rparen" ||
+            tokens[pos].value == ")" ||
+            tokens[pos].value == ";")
+        {
+            errorMessage = "Expected data type";
+            delete node;
+            return nullptr;
+        }
+
+        if (tokens[pos].value == "INT")
+        {
+            column.type = DataType::INT;
+        }
+        else if (tokens[pos].value == "STRING")
+        {
+            column.type = DataType::STRING;
+        }
+        else
+        {
+            errorMessage = "Unsupported data type";
+            delete node;
+            return nullptr;
+        }
+
+        pos++;
+
+        node->columns.push_back(column);
+
+        if (pos >= tokens.size())
+        {
+            errorMessage = "Expected ',' or ')'";
+            delete node;
+            return nullptr;
+        }
+
+        if (tokens[pos].value == ",")
+        {
+            pos++;
+            continue;
+        }
+
+        if (tokens[pos].value == ")")
+        {
+            break;
+        }
+
+        errorMessage = "Expected ',' or ')'";
+        delete node;
+        return nullptr;
+    }
+
+    if (!match(")"))
+    {
+        errorMessage = "Expected ')'";
+        delete node;
+        return nullptr;
+    }
+
+    if (!match(";"))
+    {
+        errorMessage = "Expected ';'";
+        delete node;
+        return nullptr;
+    }
+
+    return node;
+}

@@ -1,6 +1,7 @@
 #ifndef PARSER_H
 #define PARSER_H
 
+#include <unordered_set>
 #include "tokenizer.h"
 #include "ast.h"
 
@@ -36,6 +37,9 @@ public:
     QueryNode *parseSelect();
 
     string getError();
+
+    CreateTableNode* parseCreateTable();
+
 };
 
 #endif

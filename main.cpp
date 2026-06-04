@@ -21,6 +21,10 @@ int main()
     // Read multiline query until ';'
     while (getline(cin, line))
     {
+        if (line.empty())
+        {
+            break;
+        }
         s += line;
         s += " ";
 
@@ -56,9 +60,161 @@ int main()
         }
     }
 
+    // CREATE TABLE PATH
+
+    if (!tokens.empty() &&
+        tokens[0].value == "CREATE")
+    {
+        Parser parser(tokens);
+
+        CreateTableNode *createNode =
+            parser.parseCreateTable();
+
+        if (createNode == nullptr)
+        {
+            cout << "Syntax Error: "
+                 << parser.getError()
+                 << endl;
+
+            return 0;
+        }
+
+        vector<ColumnInfo> columns;
+
+        for (const auto &col : createNode->columns)
+        {
+            columns.push_back(
+                {col.name,
+                 col.type});
+        }
+
+        bool success =
+            db.createSchema(
+                createNode->tableName,
+                columns);
+
+        if (!success)
+        {
+            cout << "ERROR: Table '"
+                 << createNode->tableName
+                 << "' already exists"
+                 << endl;
+
+            delete createNode;
+
+            return 0;
+        }
+
+        cout << "Table created successfully"
+             << endl
+             << endl;
+
+        cout << createNode->tableName
+             << endl
+             << endl;
+
+        for (const auto &col : createNode->columns)
+        {
+            cout << col.name << "\t";
+
+            if (col.type == DataType::INT)
+            {
+                cout << "INT";
+            }
+            else
+            {
+                cout << "STRING";
+            }
+
+            cout << endl;
+        }
+
+        delete createNode;
+
+        return 0;
+    }
+
+    // SELECT PATH (existing code)
+
     // PARSING
     Parser parser(tokens);
 
+    // CREATE TABLE
+    if (!tokens.empty() &&
+        tokens[0].value == "CREATE")
+    {
+        CreateTableNode *createNode =
+            parser.parseCreateTable();
+
+        if (createNode == nullptr)
+        {
+            cout << "Syntax Error: "
+                 << parser.getError()
+                 << endl;
+
+            return 0;
+        }
+
+        vector<ColumnInfo> columns;
+
+        for (const auto &col :
+             createNode->columns)
+        {
+            ColumnInfo info;
+
+            info.name = col.name;
+            info.type = col.type;
+
+            columns.push_back(info);
+        }
+
+        bool created =
+            db.createSchema(
+                createNode->tableName,
+                columns);
+
+        if (!created)
+        {
+            cout << "Table already exists: "
+                 << createNode->tableName
+                 << endl;
+
+            delete createNode;
+
+            return 0;
+        }
+
+        cout << "Table created successfully"
+             << endl
+             << endl;
+
+        cout << createNode->tableName
+             << endl
+             << endl;
+
+        for (const auto &col :
+             createNode->columns)
+        {
+            cout << col.name << "\t";
+
+            if (col.type == DataType::INT)
+            {
+                cout << "INT";
+            }
+            else
+            {
+                cout << "STRING";
+            }
+
+            cout << endl;
+        }
+
+        delete createNode;
+
+        return 0;
+    }
+
+    // SELECT
     QueryNode *query =
         parser.parseSelect();
 

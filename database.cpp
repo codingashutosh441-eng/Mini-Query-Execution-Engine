@@ -105,3 +105,37 @@ void Database::seedStudents()
     insertRow("students", {5, "Son", 20});
     insertRow("students", {6, "Eren", 40});
 }
+
+bool Database::createSchema(
+    const string& tableName,
+    const vector<ColumnInfo>& columns)
+{
+    if (schemas.count(tableName))
+    {
+        return false;
+    }
+
+    TableSchema schema;
+
+    schema.tableName = tableName;
+    schema.columns = columns;
+
+    schemas[tableName] = schema;
+
+    tables[tableName] = Table(tableName);
+
+    return true;
+}
+
+const TableSchema* Database::getSchema(
+    const string& tableName) const
+{
+    auto it = schemas.find(tableName);
+
+    if (it == schemas.end())
+    {
+        return nullptr;
+    }
+
+    return &(it->second);
+}

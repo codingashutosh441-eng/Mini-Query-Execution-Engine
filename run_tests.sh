@@ -3,7 +3,7 @@
 echo "Compiling..."
 
 g++ analyzer.cpp ast.cpp database.cpp executor.cpp main.cpp parser.cpp planner.cpp tokenizer.cpp \
-    -std=c++17 -Wall -Wextra -g -o exec_test
+    -std=c++17 -Wall -Wextra -g -o done
 
 if [ $? -ne 0 ]; then
     echo "Compilation failed"
@@ -21,7 +21,7 @@ for sqlfile in $(find tests -name "*.sql" | sort)
 do
     base="${sqlfile%.sql}"
 
-    ./exec_test < "$sqlfile" > actual.txt
+    ./done < "$sqlfile" > actual.txt
 
     if diff -q actual.txt "$base.expected" > /dev/null
     then

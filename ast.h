@@ -13,6 +13,18 @@ enum class DataType
     STRING
 };
 
+struct ColumnDefinitionNode
+{
+    string name;
+    DataType type;
+};
+
+struct CreateTableNode
+{
+    string tableName;
+    vector<ColumnDefinitionNode> columns;
+};
+
 struct ColumnNode
 {
     vector<string> columns;

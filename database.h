@@ -58,6 +58,13 @@ public:
     bool columnExists(const string &tableName, const string &columnName);
     DataType getColumnType(const string &tableName, const string &columnName);
 
+    bool createSchema(
+        const string &tableName,
+        const vector<ColumnInfo> &columns);
+
+    const TableSchema *getSchema(
+        const string &tableName) const;
+
     void seedStudents();
 };
 
