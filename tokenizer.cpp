@@ -10,7 +10,7 @@ set<string> mysqlKeywords =
         "CREATE",
         "TABLE",
         "INT",
-        "STRING"
+        "STRING",
         "SELECT",
         "FROM", "WHERE",
         "INSERT", "UPDATE", "DELETE",

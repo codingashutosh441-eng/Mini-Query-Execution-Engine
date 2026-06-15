@@ -216,3 +216,128 @@ bool SemanticAnalyzer::isOperatorValid(DataType type, string op)
 
     return false;
 }
+
+bool SemanticAnalyzer::validateInsert(
+    InsertNode* node)
+{
+    if (!node)
+        return false;
+
+    if (!tableExists(node->tableName))
+    {
+        errorMessage =
+            "Unknown table: " +
+            node->tableName;
+
+        return false;
+    }
+
+    const TableSchema* schema =
+        db->getSchema(node->tableName);
+
+    if (schema == nullptr)
+    {
+        errorMessage =
+            "Schema not found";
+
+        return false;
+    }
+
+    for (size_t rowIndex = 0;
+         rowIndex < node->rows.size();
+         rowIndex++)
+    {
+        const auto& row =
+            node->rows[rowIndex];
+
+        // Column count check
+
+        if (row.values.size() !=
+            schema->columns.size())
+        {
+            errorMessage =
+                "Expected " +
+                to_string(schema->columns.size()) +
+                " values but got " +
+                to_string(row.values.size());
+
+            return false;
+        }
+
+        // Type validation
+
+        for (size_t colIndex = 0;
+             colIndex < row.values.size();
+             colIndex++)
+        {
+            DataType expected =
+                schema->columns[colIndex].type;
+
+            DataType actual =
+                row.values[colIndex].type;
+
+            if (expected != actual)
+            {
+                errorMessage =
+                    "Column '" +
+                    schema->columns[colIndex].name +
+                    "' expects " +
+                    string(expected == DataType::INT
+                               ? "INT"
+                               : "STRING");
+
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+
+bool SemanticAnalyzer::validateUpdate(
+    UpdateNode* node)
+{
+    if (!tableExists(node->tableName))
+    {
+        errorMessage =
+            "Unknown table: " +
+            node->tableName;
+
+        return false;
+    }
+
+    if (!columnExists(
+            node->tableName,
+            node->columnName))
+    {
+        errorMessage =
+            "Unknown column: " +
+            node->columnName;
+
+        return false;
+    }
+
+    DataType expected =
+        getColumnType(
+            node->tableName,
+            node->columnName);
+
+    if (expected != node->valueType)
+    {
+        errorMessage =
+            "Type mismatch for column: " +
+            node->columnName;
+
+        return false;
+    }
+
+    if (node->whereExpression)
+    {
+        return validateExpression(
+            node->whereExpression,
+            node->tableName);
+    }
+
+    return true;
+}

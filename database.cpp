@@ -16,25 +16,6 @@ void Table::insert(const Row &row)
 
 Database::Database()
 {
-    schemas["students"] =
-    {
-        "students",
-        {
-            {"id", DataType::INT},
-            {"name", DataType::STRING},
-            {"age", DataType::INT}
-        }
-    };
-
-    schemas["employees"] =
-    {
-        "employees",
-        {
-            {"id", DataType::INT},
-            {"name", DataType::STRING},
-            {"salary", DataType::INT}
-        }
-    };
 }
 
 void Database::createTable(const string &tableName)
@@ -96,19 +77,36 @@ DataType Database::getColumnType(const string &tableName, const string &columnNa
 
 void Database::seedStudents()
 {
+    if (!schemas.count("students"))
+    {
+        createSchema(
+            "students",
+            {{"id", DataType::INT},
+             {"name", DataType::STRING},
+             {"age", DataType::INT}});
+    }
     createTable("students");
 
-    insertRow("students", {1, "Rahul", 20});
-    insertRow("students", {2, "Amit", 16});
-    insertRow("students", {3, "Neha", 22});
-    insertRow("students", {4, "Alex", 28});
-    insertRow("students", {5, "Son", 20});
-    insertRow("students", {6, "Eren", 40});
+    insertRow(
+        "students",
+        {{{"1", DataType::INT},
+          {"Rahul", DataType::STRING},
+          {"20", DataType::INT}}});
+    insertRow(
+        "students",
+        {{{"2", DataType::INT},
+          {"Alex", DataType::STRING},
+          {"24", DataType::INT}}});
+    insertRow(
+        "students",
+        {{{"3", DataType::INT},
+          {"Eren", DataType::STRING},
+          {"19", DataType::INT}}});
 }
 
 bool Database::createSchema(
-    const string& tableName,
-    const vector<ColumnInfo>& columns)
+    const string &tableName,
+    const vector<ColumnInfo> &columns)
 {
     if (schemas.count(tableName))
     {
@@ -127,8 +125,32 @@ bool Database::createSchema(
     return true;
 }
 
-const TableSchema* Database::getSchema(
-    const string& tableName) const
+int Database::getColumnIndex(
+    const string &tableName,
+    const string &columnName)
+{
+    const TableSchema *schema =
+        getSchema(tableName);
+
+    if (!schema)
+        return -1;
+
+    for (size_t i = 0;
+         i < schema->columns.size();
+         i++)
+    {
+        if (schema->columns[i].name ==
+            columnName)
+        {
+            return static_cast<int>(i);
+        }
+    }
+
+    return -1;
+}
+
+const TableSchema *Database::getSchema(
+    const string &tableName) const
 {
     auto it = schemas.find(tableName);
 

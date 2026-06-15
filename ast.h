@@ -10,7 +10,8 @@ using namespace std;
 enum class DataType
 {
     INT,
-    STRING
+    STRING,
+    FLOAT
 };
 
 struct ColumnDefinitionNode
@@ -70,6 +71,34 @@ struct QueryNode
 
     OrderByNode* orderBy = nullptr;
     LimitNode* limit = nullptr;
+};
+
+struct InsertValueNode
+{
+    string value;
+    DataType type;
+};
+
+struct InsertRowNode
+{
+    vector<InsertValueNode> values;
+};
+
+struct InsertNode
+{
+    string tableName;
+    vector<InsertRowNode> rows;
+};
+
+struct UpdateNode
+{
+    string tableName;
+
+    string columnName;
+    string newValue;
+    DataType valueType;
+
+    ExpressionNode* whereExpression = nullptr;
 };
 
 void printTree(QueryNode* root);

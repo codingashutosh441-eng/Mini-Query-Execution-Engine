@@ -33,6 +33,8 @@ public:
     SemanticAnalyzer(Database* database);
 
     bool validate(QueryNode *query);
+    bool validateInsert(InsertNode* node);
+    bool validateUpdate(UpdateNode* node);
 };
 
 #endif

@@ -595,3 +595,220 @@ CreateTableNode *Parser::parseCreateTable()
 
     return node;
 }
+
+InsertNode* Parser::parseInsert()
+{
+    if (!match("INSERT"))
+    {
+        errorMessage = "Expected INSERT";
+        return nullptr;
+    }
+
+    if (!match("INTO"))
+    {
+        errorMessage = "Expected INTO";
+        return nullptr;
+    }
+
+    InsertNode* node = new InsertNode();
+
+    if (pos >= tokens.size() ||
+        tokens[pos].type != "identifier")
+    {
+        errorMessage = "Expected table name";
+        delete node;
+        return nullptr;
+    }
+
+    node->tableName = tokens[pos].value;
+    pos++;
+
+    if (!match("VALUES"))
+    {
+        errorMessage = "Expected VALUES";
+        delete node;
+        return nullptr;
+    }
+
+    while (true)
+    {
+        if (!match("("))
+        {
+            errorMessage = "Expected '('";
+            delete node;
+            return nullptr;
+        }
+
+        InsertRowNode row;
+
+        while (true)
+        {
+            if (pos >= tokens.size())
+            {
+                errorMessage = "Unexpected end of query";
+                delete node;
+                return nullptr;
+            }
+
+            InsertValueNode value;
+
+            if (tokens[pos].type == "digit")
+            {
+                value.value = tokens[pos].value;
+                value.type = DataType::INT;
+            }
+            else if (tokens[pos].type == "string")
+            {
+                value.value = tokens[pos].value;
+                value.type = DataType::STRING;
+            }
+            else
+            {
+                errorMessage = "Expected value";
+                delete node;
+                return nullptr;
+            }
+
+            row.values.push_back(value);
+
+            pos++;
+
+            if (pos < tokens.size() &&
+                tokens[pos].value == ",")
+            {
+                pos++;
+                continue;
+            }
+
+            break;
+        }
+
+        if (!match(")"))
+        {
+            errorMessage = "Expected ')'";
+            delete node;
+            return nullptr;
+        }
+
+        node->rows.push_back(row);
+
+        if (pos < tokens.size() &&
+            tokens[pos].value == ",")
+        {
+            pos++;
+            continue;
+        }
+
+        break;
+    }
+
+    if (!match(";"))
+    {
+        errorMessage = "Expected ';'";
+        delete node;
+        return nullptr;
+    }
+
+    return node;
+}
+
+
+UpdateNode* Parser::parseUpdate()
+{
+    if (!match("UPDATE"))
+    {
+        errorMessage = "Expected UPDATE";
+        return nullptr;
+    }
+
+    UpdateNode* node = new UpdateNode();
+
+    if (pos >= tokens.size() ||
+        tokens[pos].type != "identifier")
+    {
+        errorMessage = "Expected table name";
+        delete node;
+        return nullptr;
+    }
+
+    node->tableName = tokens[pos].value;
+    pos++;
+
+    if (!match("SET"))
+    {
+        errorMessage = "Expected SET";
+        delete node;
+        return nullptr;
+    }
+
+    if (pos >= tokens.size() ||
+        tokens[pos].type != "identifier")
+    {
+        errorMessage = "Expected column name";
+        delete node;
+        return nullptr;
+    }
+
+    node->columnName = tokens[pos].value;
+    pos++;
+
+    if (!match("="))
+    {
+        errorMessage = "Expected =";
+        delete node;
+        return nullptr;
+    }
+
+    if (pos >= tokens.size())
+    {
+        errorMessage = "Expected value";
+        delete node;
+        return nullptr;
+    }
+
+    node->newValue = tokens[pos].value;
+
+    if (tokens[pos].type == "digit")
+    {
+        node->valueType = DataType::INT;
+    }
+    else if (tokens[pos].type == "string")
+    {
+        node->valueType = DataType::STRING;
+    }
+    else
+    {
+        errorMessage = "Invalid value";
+        delete node;
+        return nullptr;
+    }
+
+    pos++;
+
+    if (pos < tokens.size() &&
+        tokens[pos].value == "WHERE")
+    {
+        pos++;
+
+        node->whereExpression =
+            parseExpression();
+
+        if (!node->whereExpression)
+        {
+            errorMessage =
+                "Invalid WHERE clause";
+
+            delete node;
+            return nullptr;
+        }
+    }
+
+    if (!match(";"))
+    {
+        errorMessage = "Expected ';'";
+        delete node;
+        return nullptr;
+    }
+
+    return node;
+}

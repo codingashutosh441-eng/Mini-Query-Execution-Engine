@@ -5,274 +5,118 @@
 #include "analyzer.h"
 #include "database.h"
 #include "executor.h"
+#include "command_handlers.h"
+#include "config.h"
 
 #include <iostream>
 #include <string>
 
 using namespace std;
 
-const bool DEBUG_MODE = false;
-
 int main()
 {
-    string s;
-    string line;
-
-    // Read multiline query until ';'
-    while (getline(cin, line))
-    {
-        if (line.empty())
-        {
-            break;
-        }
-        s += line;
-        s += " ";
-
-        if (line.find(';') != string::npos)
-        {
-            break;
-        }
-    }
-
-    if (s.empty())
-    {
-        cout << "Empty query" << endl;
-        return 0;
-    }
-
-    // DATABASE SETUP
     Database db;
+
     db.seedStudents();
 
-    // TOKENIZATION
-    tokenizer(s);
-
-    if (DEBUG_MODE)
+    // Read multiline query until ';'
+    while (true)
     {
-        cout << "\nTOKENS\n\n";
+        string s;
+        string line;
 
-        for (const auto &t : tokens)
+        cout << "\nminiSQL> ";
+
+        while (getline(cin, line))
         {
-            cout << t.value
-                 << " -> "
-                 << t.type
-                 << endl;
+
+            if (line == "EXIT" || line == "exit" || line == "quit" || line == "q")
+            {
+                return 0;
+            }
+
+            s += line;
+            s += " ";
+
+            if (line.find(';') != string::npos)
+            {
+                break;
+            }
         }
-    }
 
-    // CREATE TABLE PATH
+        if (s.empty())
+        {
+            continue;
+        }
 
-    if (!tokens.empty() &&
-        tokens[0].value == "CREATE")
-    {
+        // TOKENIZATION
+        tokenizer(s);
+
+        if (DEBUG_MODE)
+        {
+            cout << "\nTOKENS\n\n";
+
+            for (const auto &t : tokens)
+            {
+                cout << t.value
+                     << " -> "
+                     << t.type
+                     << endl;
+            }
+        }
+        if (tokens.empty())
+        {
+            continue;
+        }
+
+        // CREATE TABLE PATH
         Parser parser(tokens);
+        SemanticAnalyzer analyzer(&db);
 
-        CreateTableNode *createNode =
-            parser.parseCreateTable();
+        string command = tokens[0].value;
 
-        if (createNode == nullptr)
+        if (command == "CREATE")
         {
-            cout << "Syntax Error: "
-                 << parser.getError()
-                 << endl;
-
-            return 0;
+            handleCreate(
+                parser,
+                db);
+            continue;
         }
 
-        vector<ColumnInfo> columns;
-
-        for (const auto &col : createNode->columns)
+        if (command == "INSERT")
         {
-            columns.push_back(
-                {col.name,
-                 col.type});
+
+            handleInsert(
+                parser,
+                analyzer,
+                db);
+
+            continue;
         }
 
-        bool success =
-            db.createSchema(
-                createNode->tableName,
-                columns);
-
-        if (!success)
+        if (command == "UPDATE")
         {
-            cout << "ERROR: Table '"
-                 << createNode->tableName
-                 << "' already exists"
-                 << endl;
+            handleUpdate(
+                parser,
+                analyzer,
+                db);
 
-            delete createNode;
-
-            return 0;
+            continue;
         }
 
-        cout << "Table created successfully"
-             << endl
+        // SELECT
+        if (command == "SELECT")
+        {
+            handleSelect(
+                parser,
+                analyzer,
+                db);
+
+            continue;
+        }
+        cout << "Unknown command"
              << endl;
-
-        cout << createNode->tableName
-             << endl
-             << endl;
-
-        for (const auto &col : createNode->columns)
-        {
-            cout << col.name << "\t";
-
-            if (col.type == DataType::INT)
-            {
-                cout << "INT";
-            }
-            else
-            {
-                cout << "STRING";
-            }
-
-            cout << endl;
-        }
-
-        delete createNode;
-
-        return 0;
     }
-
-    // SELECT PATH (existing code)
-
-    // PARSING
-    Parser parser(tokens);
-
-    // CREATE TABLE
-    if (!tokens.empty() &&
-        tokens[0].value == "CREATE")
-    {
-        CreateTableNode *createNode =
-            parser.parseCreateTable();
-
-        if (createNode == nullptr)
-        {
-            cout << "Syntax Error: "
-                 << parser.getError()
-                 << endl;
-
-            return 0;
-        }
-
-        vector<ColumnInfo> columns;
-
-        for (const auto &col :
-             createNode->columns)
-        {
-            ColumnInfo info;
-
-            info.name = col.name;
-            info.type = col.type;
-
-            columns.push_back(info);
-        }
-
-        bool created =
-            db.createSchema(
-                createNode->tableName,
-                columns);
-
-        if (!created)
-        {
-            cout << "Table already exists: "
-                 << createNode->tableName
-                 << endl;
-
-            delete createNode;
-
-            return 0;
-        }
-
-        cout << "Table created successfully"
-             << endl
-             << endl;
-
-        cout << createNode->tableName
-             << endl
-             << endl;
-
-        for (const auto &col :
-             createNode->columns)
-        {
-            cout << col.name << "\t";
-
-            if (col.type == DataType::INT)
-            {
-                cout << "INT";
-            }
-            else
-            {
-                cout << "STRING";
-            }
-
-            cout << endl;
-        }
-
-        delete createNode;
-
-        return 0;
-    }
-
-    // SELECT
-    QueryNode *query =
-        parser.parseSelect();
-
-    if (query == nullptr)
-    {
-        cout << "Syntax Error: "
-             << parser.getError()
-             << endl;
-
-        return 0;
-    }
-
-    if (DEBUG_MODE)
-    {
-        cout << "\nPARSING RESULT\n\n";
-
-        cout << "Parsed Query\n";
-
-        cout << "\nAST TREE\n\n";
-
-        printTree(query);
-    }
-
-    // SEMANTIC ANALYSIS
-    SemanticAnalyzer analyzer(&db);
-
-    if (!analyzer.validate(query))
-    {
-        cout << "Semantic Error:\n"
-             << analyzer.errorMessage
-             << endl;
-
-        freeQuery(query);
-
-        return 0;
-    }
-
-    // QUERY PLANNER
-    Planner planner;
-
-    planner.createPlan(query);
-
-    if (DEBUG_MODE)
-    {
-        cout << "\nSemantic Analysis Passed\n";
-
-        cout << "\nQUERY PLAN\n\n";
-
-        planner.printPlan();
-    }
-
-    // EXECUTION
-    Executor executor(&db);
-
-    executor.execute(query);
-
-    // CLEANUP
-    freeQuery(query);
 
     return 0;
 }

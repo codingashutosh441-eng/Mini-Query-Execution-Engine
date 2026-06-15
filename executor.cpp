@@ -14,11 +14,35 @@ Executor::Executor(Database *database)
     db = database;
 }
 
+string Executor::getCellValue(
+    const Row& row,
+    const string& tableName,
+    const string& columnName)
+{
+    return getCell(
+        row,
+        tableName,
+        columnName).value;
+}
+
+int Executor::getCellInt(
+    const Row& row,
+    const string& tableName,
+    const string& columnName)
+{
+    return stoi(
+        getCell(
+            row,
+            tableName,
+            columnName).value);
+}
+
 // -----------------------------
 // MAIN EXPRESSION EVALUATION
 // -----------------------------
 bool Executor::evaluateExpression(
-    Row row,
+    const Row &row,
+    const string &tableName,
     ExpressionNode *node)
 {
     if (node == nullptr)
@@ -28,27 +52,43 @@ bool Executor::evaluateExpression(
     {
         if (node->logicalOp == "AND")
         {
-            return evaluateExpression(row, node->left) &&
-                   evaluateExpression(row, node->right);
+            return evaluateExpression(
+                       row,
+                       tableName,
+                       node->left) &&
+                   evaluateExpression(
+                       row,
+                       tableName,
+                       node->right);
         }
 
         else if (node->logicalOp == "OR")
         {
-            return evaluateExpression(row, node->left) ||
-                   evaluateExpression(row, node->right);
+            return evaluateExpression(
+                       row,
+                       tableName,
+                       node->left) ||
+                   evaluateExpression(
+                       row,
+                       tableName,
+                       node->right);
         }
 
         return false;
     }
 
-    return evaluateLeafCondition(row, node);
+    return evaluateLeafCondition(
+        row,
+        tableName,
+        node);
 }
 
 // -----------------------------
 // LEAF CONDITION EVALUATION
 // -----------------------------
 bool Executor::evaluateLeafCondition(
-    Row row,
+    const Row &row,
+    const string &tableName,
     ExpressionNode *node)
 {
     string column = node->column;
@@ -60,14 +100,11 @@ bool Executor::evaluateLeafCondition(
     {
         string leftValue;
 
-        if (column == "name")
-        {
-            leftValue = row.name;
-        }
-        else
-        {
-            return false;
-        }
+        leftValue =
+            getCellValue(
+                row,
+                tableName,
+                column);
 
         if (value.size() >= 2 &&
             value.front() == '\'' &&
@@ -93,18 +130,11 @@ bool Executor::evaluateLeafCondition(
     {
         int leftValue = 0;
 
-        if (column == "id")
-        {
-            leftValue = row.id;
-        }
-        else if (column == "age")
-        {
-            leftValue = row.age;
-        }
-        else
-        {
-            return false;
-        }
+        leftValue =
+            getCellInt(
+                row,
+                tableName,
+                column);
 
         int rightValue = stoi(value);
 
@@ -157,6 +187,7 @@ void Executor::execute(QueryNode *query)
     {
         if (!evaluateExpression(
                 row,
+                query->table->tableName,
                 query->whereExpression))
         {
             continue;
@@ -183,28 +214,39 @@ void Executor::execute(QueryNode *query)
             [&](const Row &a,
                 const Row &b)
             {
-                if (column == "id")
+                int idx =
+                    db->getColumnIndex(
+                        query->table->tableName,
+                        column);
+
+                if (idx < 0)
                 {
-                    return ascending
-                               ? a.id < b.id
-                               : a.id > b.id;
+                    return false;
                 }
 
-                if (column == "age")
+                DataType type =
+                    db->getColumnType(
+                        query->table->tableName,
+                        column);
+
+                if (type == DataType::INT)
                 {
+                    int left =
+                        stoi(a.values[idx].value);
+
+                    int right =
+                        stoi(b.values[idx].value);
+
                     return ascending
-                               ? a.age < b.age
-                               : a.age > b.age;
+                               ? left < right
+                               : left > right;
                 }
 
-                if (column == "name")
-                {
-                    return ascending
-                               ? a.name < b.name
-                               : a.name > b.name;
-                }
-
-                return false;
+                return ascending
+                           ? a.values[idx].value <
+                                 b.values[idx].value
+                           : a.values[idx].value >
+                                 b.values[idx].value;
             });
     }
 
@@ -232,7 +274,19 @@ void Executor::execute(QueryNode *query)
 
     if (query->columns->selectAll)
     {
-        cout << "id\tname\tage" << endl;
+        const TableSchema *schema =
+            db->getSchema(
+                query->table->tableName);
+
+        for (const auto &column :
+             schema->columns)
+        {
+            cout
+                << column.name
+                << "\t";
+        }
+
+        cout << endl;
 
         cout
             << "------------------------"
@@ -261,33 +315,157 @@ void Executor::execute(QueryNode *query)
     {
         if (query->columns->selectAll)
         {
-            cout << row.id
-                 << "\t"
-                 << row.name
-                 << "\t"
-                 << row.age
-                 << endl;
+            for (const auto &cell :
+                 row.values)
+            {
+                cout
+                    << cell.value
+                    << "\t";
+            }
+
+            cout << endl;
         }
         else
         {
             for (const auto &col :
                  query->columns->columns)
             {
-                if (col == "id")
+                int idx =
+                    db->getColumnIndex(
+                        query->table->tableName,
+                        col);
+
+                if (idx >= 0)
                 {
-                    cout << row.id << "\t";
-                }
-                else if (col == "name")
-                {
-                    cout << row.name << "\t";
-                }
-                else if (col == "age")
-                {
-                    cout << row.age << "\t";
+                    cout
+                        << row.values[idx].value
+                        << "\t";
                 }
             }
 
             cout << endl;
         }
     }
+}
+
+void Executor::executeInsert(
+    InsertNode *node)
+{
+    for (const auto &insertRow :
+         node->rows)
+    {
+        Row row;
+
+        for (const auto &value :
+             insertRow.values)
+        {
+            Cell cell;
+
+            cell.value = value.value;
+            cell.type = value.type;
+
+            if (cell.type == DataType::STRING)
+            {
+                if (cell.value.size() >= 2 &&
+                    cell.value.front() == '\'' &&
+                    cell.value.back() == '\'')
+                {
+                    cell.value =
+                        cell.value.substr(
+                            1,
+                            cell.value.size() - 2);
+                }
+            }
+
+            row.values.push_back(cell);
+        }
+
+        db->insertRow(
+            node->tableName,
+            row);
+    }
+
+    cout
+        << node->rows.size()
+        << " row(s) inserted"
+        << endl;
+}
+
+
+Cell Executor::getCell(
+    const Row& row,
+    const string& tableName,
+    const string& columnName)
+{
+    int idx =
+        db->getColumnIndex(
+            tableName,
+            columnName);
+
+    if (idx < 0 ||
+        static_cast<size_t>(idx) >=
+            row.values.size())
+    {
+        return {"", DataType::STRING};
+    }
+
+    return row.values[idx];
+}
+
+void Executor::executeUpdate(
+    UpdateNode* node)
+{
+    Table* table =
+        db->getTable(
+            node->tableName);
+
+    if (!table)
+    {
+        return;
+    }
+
+    int targetIndex =
+        db->getColumnIndex(
+            node->tableName,
+            node->columnName);
+
+    int updatedRows = 0;
+
+    for (auto& row : table->rows)
+    {
+        if (!evaluateExpression(
+                row,
+                node->tableName,
+                node->whereExpression))
+        {
+            continue;
+        }
+
+        string value =
+            node->newValue;
+
+        if (node->valueType ==
+            DataType::STRING)
+        {
+            if (value.size() >= 2 &&
+                value.front() == '\'' &&
+                value.back() == '\'')
+            {
+                value =
+                    value.substr(
+                        1,
+                        value.size() - 2);
+            }
+        }
+
+        row.values[targetIndex].value =
+            value;
+
+        updatedRows++;
+    }
+
+    cout
+        << updatedRows
+        << " row(s) updated"
+        << endl;
 }

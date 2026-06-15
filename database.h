@@ -22,11 +22,15 @@ struct TableSchema
     vector<ColumnInfo> columns;
 };
 
+struct Cell
+{
+    string value;
+    DataType type;
+};
+
 struct Row
 {
-    int id;
-    string name;
-    int age;
+    vector<Cell> values;
 };
 
 class Table
@@ -66,6 +70,10 @@ public:
         const string &tableName) const;
 
     void seedStudents();
+
+    int getColumnIndex(
+    const string& tableName,
+    const string& columnName);
 };
 
 #endif

@@ -1,4 +1,0 @@
-Semantic Error:
-Invalid INT conversion:
-Column 'age' is INT
-Value 'abc' cannot be converted to INT

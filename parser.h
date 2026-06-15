@@ -39,6 +39,8 @@ public:
     string getError();
 
     CreateTableNode* parseCreateTable();
+    InsertNode* parseInsert();
+    UpdateNode* parseUpdate();
 
 };
 
