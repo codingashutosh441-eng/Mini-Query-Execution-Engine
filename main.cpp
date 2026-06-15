@@ -114,6 +114,16 @@ int main()
 
             continue;
         }
+
+        if (command == "DELETE")
+        {
+            handleDelete(
+                parser,
+                analyzer,
+                db);
+
+            continue;
+        }
         cout << "Unknown command"
              << endl;
     }

@@ -469,3 +469,48 @@ void Executor::executeUpdate(
         << " row(s) updated"
         << endl;
 }
+
+void Executor::executeDelete(
+    DeleteNode* node)
+{
+    Table* table =
+        db->getTable(
+            node->tableName);
+
+    if (!table)
+    {
+        return;
+    }
+
+    vector<Row> remainingRows;
+
+    int deletedRows = 0;
+
+    for (const auto& row :
+         table->rows)
+    {
+        bool shouldDelete =
+            evaluateExpression(
+                row,
+                node->tableName,
+                node->whereExpression);
+
+        if (shouldDelete)
+        {
+            deletedRows++;
+        }
+        else
+        {
+            remainingRows.push_back(
+                row);
+        }
+    }
+
+    table->rows =
+        remainingRows;
+
+    cout
+        << deletedRows
+        << " row(s) deleted"
+        << endl;
+}

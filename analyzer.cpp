@@ -341,3 +341,25 @@ bool SemanticAnalyzer::validateUpdate(
 
     return true;
 }
+
+bool SemanticAnalyzer::validateDelete(
+    DeleteNode* node)
+{
+    if (!tableExists(node->tableName))
+    {
+        errorMessage =
+            "Unknown table: " +
+            node->tableName;
+
+        return false;
+    }
+
+    if (node->whereExpression)
+    {
+        return validateExpression(
+            node->whereExpression,
+            node->tableName);
+    }
+
+    return true;
+}

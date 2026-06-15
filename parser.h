@@ -41,6 +41,7 @@ public:
     CreateTableNode* parseCreateTable();
     InsertNode* parseInsert();
     UpdateNode* parseUpdate();
+    DeleteNode* parseDelete();
 
 };
 

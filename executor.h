@@ -45,6 +45,7 @@ public:
     void execute(QueryNode *query);
     void executeInsert(InsertNode *node);
     void executeUpdate(UpdateNode* node);
+    void executeDelete(DeleteNode* node);
 };
 
 #endif

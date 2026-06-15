@@ -134,3 +134,14 @@ void freeQuery(QueryNode *query)
 
     delete query;
 }
+
+void freeDelete(DeleteNode* node)
+{
+    if (!node)
+        return;
+
+    freeExpressionTree(
+        node->whereExpression);
+
+    delete node;
+}

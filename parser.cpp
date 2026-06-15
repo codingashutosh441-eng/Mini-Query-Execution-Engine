@@ -812,3 +812,62 @@ UpdateNode* Parser::parseUpdate()
 
     return node;
 }
+
+DeleteNode* Parser::parseDelete()
+{
+    DeleteNode* node =
+        new DeleteNode();
+
+    if (!match("DELETE"))
+    {
+        errorMessage =
+            "Expected DELETE";
+
+        delete node;
+        return nullptr;
+    }
+
+    if (!match("FROM"))
+    {
+        errorMessage =
+            "Expected FROM";
+
+        delete node;
+        return nullptr;
+    }
+
+    if (pos >= tokens.size() ||
+        tokens[pos].type != "identifier")
+    {
+        errorMessage =
+            "Expected table name";
+
+        delete node;
+        return nullptr;
+    }
+
+    node->tableName =
+        tokens[pos].value;
+
+    pos++;
+
+    if (pos < tokens.size() &&
+        tokens[pos].value == "WHERE")
+    {
+        pos++;
+
+        node->whereExpression =
+            parseExpression();
+
+        if (!node->whereExpression)
+        {
+            errorMessage =
+                "Invalid WHERE clause";
+
+            delete node;
+            return nullptr;
+        }
+    }
+
+    return node;
+}

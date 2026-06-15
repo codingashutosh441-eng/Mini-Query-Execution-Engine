@@ -209,3 +209,40 @@ void handleSelect(
     // CLEANUP
     freeQuery(query);
 }
+
+
+void handleDelete(
+    Parser& parser,
+    SemanticAnalyzer& analyzer,
+    Database& db)
+{
+    DeleteNode* deleteNode =
+        parser.parseDelete();
+
+    if (!deleteNode)
+    {
+        cout << "Syntax Error: "
+             << parser.getError()
+             << endl;
+
+        return;
+    }
+
+    if (!analyzer.validateDelete(
+            deleteNode))
+    {
+        cout << "Semantic Error:\n"
+             << analyzer.errorMessage
+             << endl;
+
+        freeDelete(deleteNode);
+        return;
+    }
+
+    Executor executor(&db);
+
+    executor.executeDelete(
+        deleteNode);
+
+    freeDelete(deleteNode);
+}

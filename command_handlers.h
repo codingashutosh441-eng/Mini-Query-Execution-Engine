@@ -24,4 +24,9 @@ void handleSelect(
     SemanticAnalyzer& analyzer,
     Database& db);
 
+void handleDelete(
+    Parser& parser,
+    SemanticAnalyzer& analyzer,
+    Database& db);
+
 #endif

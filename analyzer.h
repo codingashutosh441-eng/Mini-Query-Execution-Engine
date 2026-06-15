@@ -35,6 +35,7 @@ public:
     bool validate(QueryNode *query);
     bool validateInsert(InsertNode* node);
     bool validateUpdate(UpdateNode* node);
+    bool validateDelete(DeleteNode* node);
 };
 
 #endif

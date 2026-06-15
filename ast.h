@@ -101,10 +101,18 @@ struct UpdateNode
     ExpressionNode* whereExpression = nullptr;
 };
 
+struct DeleteNode
+{
+    string tableName;
+
+    ExpressionNode* whereExpression = nullptr;
+};
+
 void printTree(QueryNode* root);
 void freeQuery(QueryNode* root);
 
 void printExpressionTree(ExpressionNode *node, int level);
 void freeExpressionTree(ExpressionNode *node);
+void freeDelete(DeleteNode* node);
 
 #endif
