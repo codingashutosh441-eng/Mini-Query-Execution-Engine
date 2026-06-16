@@ -1,5 +1,5 @@
 #include "executor.h"
-
+#include "storage.h"
 #include <iostream>
 #include <cstdlib>
 #include <algorithm>
@@ -15,26 +15,28 @@ Executor::Executor(Database *database)
 }
 
 string Executor::getCellValue(
-    const Row& row,
-    const string& tableName,
-    const string& columnName)
+    const Row &row,
+    const string &tableName,
+    const string &columnName)
 {
     return getCell(
-        row,
-        tableName,
-        columnName).value;
+               row,
+               tableName,
+               columnName)
+        .value;
 }
 
 int Executor::getCellInt(
-    const Row& row,
-    const string& tableName,
-    const string& columnName)
+    const Row &row,
+    const string &tableName,
+    const string &columnName)
 {
     return stoi(
         getCell(
             row,
             tableName,
-            columnName).value);
+            columnName)
+            .value);
 }
 
 // -----------------------------
@@ -383,6 +385,10 @@ void Executor::executeInsert(
         db->insertRow(
             node->tableName,
             row);
+
+        StorageManager::appendRow(
+            node->tableName,
+            row);
     }
 
     cout
@@ -391,11 +397,10 @@ void Executor::executeInsert(
         << endl;
 }
 
-
 Cell Executor::getCell(
-    const Row& row,
-    const string& tableName,
-    const string& columnName)
+    const Row &row,
+    const string &tableName,
+    const string &columnName)
 {
     int idx =
         db->getColumnIndex(
@@ -413,9 +418,9 @@ Cell Executor::getCell(
 }
 
 void Executor::executeUpdate(
-    UpdateNode* node)
+    UpdateNode *node)
 {
-    Table* table =
+    Table *table =
         db->getTable(
             node->tableName);
 
@@ -431,7 +436,7 @@ void Executor::executeUpdate(
 
     int updatedRows = 0;
 
-    for (auto& row : table->rows)
+    for (auto &row : table->rows)
     {
         if (!evaluateExpression(
                 row,
@@ -464,6 +469,16 @@ void Executor::executeUpdate(
         updatedRows++;
     }
 
+    const TableSchema *schema =
+        db->getSchema(
+            node->tableName);
+
+    if (schema)
+    {
+        StorageManager::saveTable(
+            *table);
+    }
+
     cout
         << updatedRows
         << " row(s) updated"
@@ -471,9 +486,9 @@ void Executor::executeUpdate(
 }
 
 void Executor::executeDelete(
-    DeleteNode* node)
+    DeleteNode *node)
 {
-    Table* table =
+    Table *table =
         db->getTable(
             node->tableName);
 
@@ -486,7 +501,7 @@ void Executor::executeDelete(
 
     int deletedRows = 0;
 
-    for (const auto& row :
+    for (const auto &row :
          table->rows)
     {
         bool shouldDelete =
@@ -508,6 +523,16 @@ void Executor::executeDelete(
 
     table->rows =
         remainingRows;
+
+    const TableSchema *schema =
+        db->getSchema(
+            node->tableName);
+
+    if (schema)
+    {
+        StorageManager::saveTable(
+            *table);
+    }
 
     cout
         << deletedRows

@@ -161,3 +161,25 @@ const TableSchema *Database::getSchema(
 
     return &(it->second);
 }
+
+const unordered_map<string, TableSchema>&
+Database::getSchemas() const
+{
+    return schemas;
+}
+
+void Database::addLoadedSchema(
+    const TableSchema& schema)
+{
+    schemas[schema.tableName] =
+        schema;
+}
+
+void Database::addLoadedTable(
+    const Table& table)
+{
+    tables[table.tableName] =
+        table;
+}
+
+

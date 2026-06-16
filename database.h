@@ -72,8 +72,17 @@ public:
     void seedStudents();
 
     int getColumnIndex(
-    const string& tableName,
-    const string& columnName);
+        const string &tableName,
+        const string &columnName);
+
+    const unordered_map<string, TableSchema> &
+    getSchemas() const;
+
+    void addLoadedSchema(
+        const TableSchema &schema);
+
+    void addLoadedTable(
+        const Table &table);
 };
 
 #endif

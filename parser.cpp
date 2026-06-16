@@ -545,6 +545,10 @@ CreateTableNode *Parser::parseCreateTable()
         {
             column.type = DataType::STRING;
         }
+        else if (tokens[pos].value == "FLOAT")
+        {
+            column.type = DataType::FLOAT;
+        }
         else
         {
             errorMessage = "Unsupported data type";
@@ -596,7 +600,7 @@ CreateTableNode *Parser::parseCreateTable()
     return node;
 }
 
-InsertNode* Parser::parseInsert()
+InsertNode *Parser::parseInsert()
 {
     if (!match("INSERT"))
     {
@@ -610,7 +614,7 @@ InsertNode* Parser::parseInsert()
         return nullptr;
     }
 
-    InsertNode* node = new InsertNode();
+    InsertNode *node = new InsertNode();
 
     if (pos >= tokens.size() ||
         tokens[pos].type != "identifier")
@@ -712,8 +716,7 @@ InsertNode* Parser::parseInsert()
     return node;
 }
 
-
-UpdateNode* Parser::parseUpdate()
+UpdateNode *Parser::parseUpdate()
 {
     if (!match("UPDATE"))
     {
@@ -721,7 +724,7 @@ UpdateNode* Parser::parseUpdate()
         return nullptr;
     }
 
-    UpdateNode* node = new UpdateNode();
+    UpdateNode *node = new UpdateNode();
 
     if (pos >= tokens.size() ||
         tokens[pos].type != "identifier")
@@ -813,9 +816,9 @@ UpdateNode* Parser::parseUpdate()
     return node;
 }
 
-DeleteNode* Parser::parseDelete()
+DeleteNode *Parser::parseDelete()
 {
-    DeleteNode* node =
+    DeleteNode *node =
         new DeleteNode();
 
     if (!match("DELETE"))

@@ -1,5 +1,5 @@
 #include "command_handlers.h"
-
+#include "storage.h"
 #include "config.h"
 #include "planner.h"
 #include "executor.h"
@@ -39,7 +39,7 @@ void handleCreate(
             createNode->tableName,
             columns);
 
-    if (!success)
+        if (!success)
     {
         cout << "ERROR: Table '"
              << createNode->tableName
@@ -50,6 +50,13 @@ void handleCreate(
 
         return;
     }
+
+    const TableSchema *schema =
+        db.getSchema(
+            createNode->tableName);
+
+    StorageManager::createTableFiles(
+        *schema);
 
     cout << "Table created successfully"
          << endl
@@ -210,13 +217,12 @@ void handleSelect(
     freeQuery(query);
 }
 
-
 void handleDelete(
-    Parser& parser,
-    SemanticAnalyzer& analyzer,
-    Database& db)
+    Parser &parser,
+    SemanticAnalyzer &analyzer,
+    Database &db)
 {
-    DeleteNode* deleteNode =
+    DeleteNode *deleteNode =
         parser.parseDelete();
 
     if (!deleteNode)

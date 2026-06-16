@@ -1,0 +1,3 @@
+id,INT
+name,STRING
+salary,INT

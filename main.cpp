@@ -5,6 +5,7 @@
 #include "analyzer.h"
 #include "database.h"
 #include "executor.h"
+#include "storage.h"
 #include "command_handlers.h"
 #include "config.h"
 
@@ -17,7 +18,8 @@ int main()
 {
     Database db;
 
-    db.seedStudents();
+    StorageManager::loadDatabase(
+    db);
 
     // Read multiline query until ';'
     while (true)
