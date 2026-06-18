@@ -14,6 +14,29 @@ enum class DataType
     FLOAT
 };
 
+enum class AggregateType
+{
+    COUNT,
+    SUM,
+    AVG,
+    MIN,
+    MAX
+};
+
+struct GroupByNode
+{
+    vector<string> columns;
+};
+
+struct AggregateNode
+{
+    AggregateType type;
+
+    string column;
+
+    bool countStar = false;
+};
+
 struct ColumnDefinitionNode
 {
     string name;
@@ -29,6 +52,9 @@ struct CreateTableNode
 struct ColumnNode
 {
     vector<string> columns;
+
+    vector<AggregateNode> aggregates;
+
     bool selectAll = false;
 };
 
@@ -71,6 +97,8 @@ struct QueryNode
 
     OrderByNode* orderBy = nullptr;
     LimitNode* limit = nullptr;
+
+    GroupByNode* groupBy = nullptr;
 };
 
 struct InsertValueNode

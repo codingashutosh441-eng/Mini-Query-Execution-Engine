@@ -5,8 +5,16 @@
 #include "ast.h"
 #include <vector>
 #include <string>
+#include <unordered_map>
 
 using namespace std;
+
+struct GroupResult
+{
+    string groupKey;
+
+    vector<string> aggregateValues;
+};
 
 class Executor
 {
@@ -15,14 +23,14 @@ private:
 
     // Evaluate full expression tree (AND / OR / leaf)
     bool evaluateExpression(
-    const Row& row,
-    const string& tableName,
-    ExpressionNode* node);
+        const Row &row,
+        const string &tableName,
+        ExpressionNode *node);
 
-bool evaluateLeafCondition(
-    const Row& row,
-    const string& tableName,
-    ExpressionNode* node);
+    bool evaluateLeafCondition(
+        const Row &row,
+        const string &tableName,
+        ExpressionNode *node);
     string getCellValue(
         const Row &row,
         const string &tableName,
@@ -34,9 +42,42 @@ bool evaluateLeafCondition(
         const string &columnName);
 
     Cell getCell(
-    const Row& row,
-    const string& tableName,
-    const string& columnName);
+        const Row &row,
+        const string &tableName,
+        const string &columnName);
+
+    void executeAggregate(
+        const vector<Row> &rows,
+        const string &tableName,
+        QueryNode *query);
+
+    void executeGroupBy(
+        const vector<Row> &rows,
+        const string &tableName,
+        QueryNode *query);
+
+    long long calculateCount(
+        const vector<Row> &rows);
+
+    long long calculateSum(
+        const vector<Row> &rows,
+        const string &tableName,
+        const string &column);
+
+    double calculateAvg(
+        const vector<Row> &rows,
+        const string &tableName,
+        const string &column);
+
+    string calculateMin(
+        const vector<Row> &rows,
+        const string &tableName,
+        const string &column);
+
+    string calculateMax(
+        const vector<Row> &rows,
+        const string &tableName,
+        const string &column);
 
 public:
     Executor(Database *database);
@@ -44,8 +85,8 @@ public:
     // Executes query and prints result
     void execute(QueryNode *query);
     void executeInsert(InsertNode *node);
-    void executeUpdate(UpdateNode* node);
-    void executeDelete(DeleteNode* node);
+    void executeUpdate(UpdateNode *node);
+    void executeDelete(DeleteNode *node);
 };
 
 #endif

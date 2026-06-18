@@ -15,7 +15,9 @@ enum class StepType
     FILTER,
     SORT,
     LIMIT,
-    PROJECT
+    PROJECT,
+    AGGREGATE,
+    GROUP_BY
 };
 
 struct ExecutionStep

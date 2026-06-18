@@ -198,6 +198,29 @@ void Executor::execute(QueryNode *query)
         resultRows.push_back(row);
     }
 
+    if (!query->columns->aggregates.empty())
+    {
+        // cout << "DEBUG: aggregate found" << endl;
+        if (query->groupBy != nullptr)
+        {
+            // cout << "DEBUG: group by found" << endl;
+            executeGroupBy(
+                resultRows,
+                query->table->tableName,
+                query);
+        }
+        else
+        {
+            // cout << "DEBUG: no group by" << endl;
+            executeAggregate(
+                resultRows,
+                query->table->tableName,
+                query);
+        }
+
+        return;
+    }
+
     // -------------------------
     // SORT PHASE
     // -------------------------
@@ -538,4 +561,368 @@ void Executor::executeDelete(
         << deletedRows
         << " row(s) deleted"
         << endl;
+}
+
+long long Executor::calculateCount(
+    const vector<Row> &rows)
+{
+    return rows.size();
+}
+
+long long Executor::calculateSum(
+    const vector<Row> &rows,
+    const string &tableName,
+    const string &column)
+{
+    long long total = 0;
+
+    for (const auto &row : rows)
+    {
+        total +=
+            getCellInt(
+                row,
+                tableName,
+                column);
+    }
+
+    return total;
+}
+
+double Executor::calculateAvg(
+    const vector<Row> &rows,
+    const string &tableName,
+    const string &column)
+{
+    if (rows.empty())
+    {
+        return 0;
+    }
+
+    long long total =
+        calculateSum(
+            rows,
+            tableName,
+            column);
+
+    return static_cast<double>(total) / rows.size();
+}
+
+string Executor::calculateMin(
+    const vector<Row> &rows,
+    const string &tableName,
+    const string &column)
+{
+    if (rows.empty())
+    {
+        return "";
+    }
+
+    int minValue =
+        getCellInt(
+            rows[0],
+            tableName,
+            column);
+
+    for (const auto &row : rows)
+    {
+        minValue =
+            min(
+                minValue,
+                getCellInt(
+                    row,
+                    tableName,
+                    column));
+    }
+
+    return to_string(minValue);
+}
+
+string Executor::calculateMax(
+    const vector<Row> &rows,
+    const string &tableName,
+    const string &column)
+{
+    if (rows.empty())
+    {
+        return "";
+    }
+
+    int maxValue =
+        getCellInt(
+            rows[0],
+            tableName,
+            column);
+
+    for (const auto &row : rows)
+    {
+        maxValue =
+            max(
+                maxValue,
+                getCellInt(
+                    row,
+                    tableName,
+                    column));
+    }
+
+    return to_string(maxValue);
+}
+
+void Executor::executeAggregate(
+    const vector<Row> &rows,
+    const string &tableName,
+    QueryNode *query)
+{
+    cout << "\nRESULT\n\n";
+
+    for (const auto &agg :
+         query->columns->aggregates)
+    {
+        switch (agg.type)
+        {
+        case AggregateType::COUNT:
+        {
+            cout << "COUNT(*)"
+                 << endl;
+
+            cout << calculateCount(rows)
+                 << endl;
+
+            break;
+        }
+
+        case AggregateType::SUM:
+        {
+            cout << "SUM("
+                 << agg.column
+                 << ")"
+                 << endl;
+
+            cout << calculateSum(
+                        rows,
+                        tableName,
+                        agg.column)
+                 << endl;
+
+            break;
+        }
+
+        case AggregateType::AVG:
+        {
+            cout << "AVG("
+                 << agg.column
+                 << ")"
+                 << endl;
+
+            cout << calculateAvg(
+                        rows,
+                        tableName,
+                        agg.column)
+                 << endl;
+
+            break;
+        }
+
+        case AggregateType::MIN:
+        {
+            cout << "MIN("
+                 << agg.column
+                 << ")"
+                 << endl;
+
+            cout << calculateMin(
+                        rows,
+                        tableName,
+                        agg.column)
+                 << endl;
+
+            break;
+        }
+
+        case AggregateType::MAX:
+        {
+            cout << "MAX("
+                 << agg.column
+                 << ")"
+                 << endl;
+
+            cout << calculateMax(
+                        rows,
+                        tableName,
+                        agg.column)
+                 << endl;
+
+            break;
+        }
+        }
+    }
+}
+
+void Executor::executeGroupBy(
+    const vector<Row> &rows,
+    const string &tableName,
+    QueryNode *query)
+{
+    string groupColumn =
+        query->groupBy->columns[0];
+
+    unordered_map<
+        string,
+        vector<Row>>
+        groups;
+
+    vector<GroupResult> results;
+
+    for (const auto &row : rows)
+    {
+        string key =
+            getCellValue(
+                row,
+                tableName,
+                groupColumn);
+
+        groups[key].push_back(row);
+    }
+
+    cout << "\nRESULT\n\n";
+
+    cout << groupColumn << "\t";
+
+    for (const auto &agg :
+         query->columns->aggregates)
+    {
+        switch (agg.type)
+        {
+        case AggregateType::COUNT:
+            cout << "COUNT(*)";
+            break;
+
+        case AggregateType::SUM:
+            cout << "SUM(" << agg.column << ")";
+            break;
+
+        case AggregateType::AVG:
+            cout << "AVG(" << agg.column << ")";
+            break;
+
+        case AggregateType::MIN:
+            cout << "MIN(" << agg.column << ")";
+            break;
+
+        case AggregateType::MAX:
+            cout << "MAX(" << agg.column << ")";
+            break;
+        }
+
+        cout << "\t";
+    }
+
+    cout << endl;
+
+    cout << "------------------------"
+         << endl;
+
+    for (auto &pair : groups)
+    {
+
+        GroupResult result;
+
+        result.groupKey = pair.first;
+
+        // cout << pair.first << "\t";
+
+        const vector<Row> &groupRows =
+            pair.second;
+
+        for (const auto &agg :
+             query->columns->aggregates)
+        {
+            switch (agg.type)
+            {
+            case AggregateType::COUNT:
+                result.aggregateValues.push_back(
+                    to_string(
+                        calculateCount(groupRows)));
+                break;
+
+            case AggregateType::SUM:
+                result.aggregateValues.push_back(
+                    to_string(
+                        calculateSum(
+                            groupRows,
+                            tableName,
+                            agg.column)));
+                break;
+
+            case AggregateType::AVG:
+                result.aggregateValues.push_back(
+                    to_string(
+                        calculateAvg(
+                            groupRows,
+                            tableName,
+                            agg.column)));
+                break;
+
+            case AggregateType::MIN:
+                result.aggregateValues.push_back(
+                    calculateMin(
+                        groupRows,
+                        tableName,
+                        agg.column));
+                break;
+
+            case AggregateType::MAX:
+                result.aggregateValues.push_back(
+                    calculateMax(
+                        groupRows,
+                        tableName,
+                        agg.column));
+                break;
+
+                // cout << "\t";
+            }
+        }
+        results.push_back(result);
+        //cout << "DEBUG RESULT ADDED" << endl;
+    }
+
+    if (query->orderBy != nullptr)
+    {
+        bool ascending =
+            query->orderBy->direction == "ASC";
+
+        sort(
+            results.begin(),
+            results.end(),
+            [&](const GroupResult &a,
+                const GroupResult &b)
+            {
+                int left =
+                    stoi(a.groupKey);
+
+                int right =
+                    stoi(b.groupKey);
+
+                return ascending
+                           ? left < right
+                           : left > right;
+            });
+    }
+
+    for (const auto &result :
+         results)
+    {
+        cout
+            << result.groupKey
+            << "\t";
+
+        for (const auto &value :
+             result.aggregateValues)
+        {
+            cout
+                << value
+                << "\t";
+        }
+
+        cout << endl;
+    }
 }

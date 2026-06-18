@@ -195,8 +195,112 @@ bool SemanticAnalyzer::validate(QueryNode *query)
         }
     }
 
+    if (query->columns == nullptr)
+    {
+        errorMessage = "Missing column list";
+        return false;
+    }
+
+    bool hasColumns =
+        !query->columns->columns.empty();
+
+    bool hasAggregates =
+        !query->columns->aggregates.empty();
+
+    if (hasColumns && hasAggregates)
+    {
+        if (query->groupBy == nullptr)
+        {
+            errorMessage =
+                "Mixing columns and aggregates requires GROUP BY";
+
+            return false;
+        }
+
+        for (const string &col :
+             query->columns->columns)
+        {
+            bool found = false;
+
+            for (const string &groupCol :
+                 query->groupBy->columns)
+            {
+                if (col == groupCol)
+                {
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found)
+            {
+                errorMessage =
+                    "Column must appear in GROUP BY: " +
+                    col;
+
+                return false;
+            }
+        }
+    }
+
+    if (query->groupBy != nullptr)
+    {
+        for (const string &col :
+             query->groupBy->columns)
+        {
+            if (!columnExists(tableName, col))
+            {
+                errorMessage =
+                    "Unknown column in GROUP BY: " +
+                    col;
+
+                return false;
+            }
+        }
+    }
+
+    for (const auto &agg :
+         query->columns->aggregates)
+    {
+        // COUNT(*) has no column
+        if (agg.type == AggregateType::COUNT)
+        {
+            continue;
+        }
+
+        if (!columnExists(
+                tableName,
+                agg.column))
+        {
+            errorMessage =
+                "Unknown column: " +
+                agg.column;
+
+            return false;
+        }
+
+        DataType type =
+            db->getColumnType(
+                tableName,
+                agg.column);
+
+        if ((agg.type == AggregateType::SUM ||
+             agg.type == AggregateType::AVG ||
+             agg.type == AggregateType::MIN ||
+             agg.type == AggregateType::MAX) &&
+            type != DataType::INT)
+        {
+            errorMessage =
+                "Aggregate requires numeric column: " +
+                agg.column;
+
+            return false;
+        }
+    }
+
     return true;
 }
+
 bool SemanticAnalyzer::isOperatorValid(DataType type, string op)
 {
     if (type == DataType::INT)
@@ -218,7 +322,7 @@ bool SemanticAnalyzer::isOperatorValid(DataType type, string op)
 }
 
 bool SemanticAnalyzer::validateInsert(
-    InsertNode* node)
+    InsertNode *node)
 {
     if (!node)
         return false;
@@ -232,7 +336,7 @@ bool SemanticAnalyzer::validateInsert(
         return false;
     }
 
-    const TableSchema* schema =
+    const TableSchema *schema =
         db->getSchema(node->tableName);
 
     if (schema == nullptr)
@@ -247,7 +351,7 @@ bool SemanticAnalyzer::validateInsert(
          rowIndex < node->rows.size();
          rowIndex++)
     {
-        const auto& row =
+        const auto &row =
             node->rows[rowIndex];
 
         // Column count check
@@ -294,9 +398,8 @@ bool SemanticAnalyzer::validateInsert(
     return true;
 }
 
-
 bool SemanticAnalyzer::validateUpdate(
-    UpdateNode* node)
+    UpdateNode *node)
 {
     if (!tableExists(node->tableName))
     {
@@ -343,7 +446,7 @@ bool SemanticAnalyzer::validateUpdate(
 }
 
 bool SemanticAnalyzer::validateDelete(
-    DeleteNode* node)
+    DeleteNode *node)
 {
     if (!tableExists(node->tableName))
     {

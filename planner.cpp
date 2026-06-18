@@ -60,6 +60,74 @@ void Planner::createPlan(QueryNode *query)
         steps.push_back(step);
     }
 
+    if (query->columns != nullptr &&
+        !query->columns->aggregates.empty())
+    {
+        ExecutionStep step;
+
+        step.type =
+            StepType::AGGREGATE;
+
+        for (const auto &agg :
+             query->columns->aggregates)
+        {
+            switch (agg.type)
+            {
+            case AggregateType::COUNT:
+                step.details +=
+                    "COUNT(*) ";
+                break;
+
+            case AggregateType::SUM:
+                step.details +=
+                    "SUM(" +
+                    agg.column +
+                    ") ";
+                break;
+
+            case AggregateType::AVG:
+                step.details +=
+                    "AVG(" +
+                    agg.column +
+                    ") ";
+                break;
+
+            case AggregateType::MIN:
+                step.details +=
+                    "MIN(" +
+                    agg.column +
+                    ") ";
+                break;
+
+            case AggregateType::MAX:
+                step.details +=
+                    "MAX(" +
+                    agg.column +
+                    ") ";
+                break;
+            }
+        }
+
+        steps.push_back(step);
+    }
+
+    if (query->groupBy != nullptr)
+    {
+        ExecutionStep step;
+
+        step.type =
+            StepType::GROUP_BY;
+
+        for (const auto &col :
+             query->groupBy->columns)
+        {
+            step.details +=
+                col + " ";
+        }
+
+        steps.push_back(step);
+    }
+
     if (query->orderBy != nullptr)
     {
         ExecutionStep step;
@@ -88,7 +156,7 @@ void Planner::createPlan(QueryNode *query)
 
     if (query->columns != nullptr)
     {
-        if (!query->columns->selectAll)
+        if (!query->columns->selectAll && !query->columns->columns.empty())
         {
             ExecutionStep step;
 
@@ -144,6 +212,17 @@ void Planner::printPlan()
             cout << "PROJECT columns: "
                  << step.details;
         }
+        else if (step.type == StepType::GROUP_BY)
+        {
+            cout << "GROUP BY "
+                 << step.details;
+        }
+        else if (step.type == StepType::AGGREGATE)
+        {
+            cout << "AGGREGATE "
+                 << step.details;
+        }
+        
 
         cout << endl
              << endl;

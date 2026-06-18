@@ -25,36 +25,63 @@ bool Parser::match(string expected)
     return false;
 }
 
-bool Parser::parseColumns(QueryNode *query)
+bool Parser::parseColumns(
+    QueryNode *query)
 {
-    ColumnNode *columns = new ColumnNode();
+    ColumnNode *columns =
+        new ColumnNode();
 
     if (pos >= tokens.size())
     {
-        errorMessage = "Expected column name";
+        errorMessage =
+            "Expected column name";
+
         return false;
     }
 
     if (tokens[pos].value == "*")
     {
         columns->selectAll = true;
+
         pos++;
+
         query->columns = columns;
+
         return true;
     }
 
     while (pos < tokens.size())
     {
-        if (tokens[pos].type != "identifier")
+        if (tokens[pos].value == "COUNT" ||
+            tokens[pos].value == "SUM" ||
+            tokens[pos].value == "AVG" ||
+            tokens[pos].value == "MIN" ||
+            tokens[pos].value == "MAX")
         {
-            errorMessage = "Expected column name";
-            return false;
+            if (!parseAggregate(
+                    columns))
+            {
+                return false;
+            }
+        }
+        else
+        {
+            if (tokens[pos].type != "identifier")
+            {
+                errorMessage =
+                    "Expected column name";
+
+                return false;
+            }
+
+            columns->columns.push_back(
+                tokens[pos].value);
+
+            pos++;
         }
 
-        columns->columns.push_back(tokens[pos].value);
-        pos++;
-
-        if (pos < tokens.size() && tokens[pos].value == ",")
+        if (pos < tokens.size() &&
+            tokens[pos].value == ",")
         {
             pos++;
         }
@@ -65,8 +92,10 @@ bool Parser::parseColumns(QueryNode *query)
     }
 
     query->columns = columns;
+
     return true;
 }
+
 
 bool Parser::parseTable(QueryNode *query)
 {
@@ -185,6 +214,148 @@ bool Parser::parseLimit(QueryNode *query)
     return true;
 }
 
+bool Parser::parseAggregate(
+    ColumnNode* columns)
+{
+    AggregateNode agg;
+
+    string func =
+        tokens[pos].value;
+
+    if (func == "COUNT")
+        agg.type = AggregateType::COUNT;
+
+    else if (func == "SUM")
+        agg.type = AggregateType::SUM;
+
+    else if (func == "AVG")
+        agg.type = AggregateType::AVG;
+
+    else if (func == "MIN")
+        agg.type = AggregateType::MIN;
+
+    else if (func == "MAX")
+        agg.type = AggregateType::MAX;
+
+    else
+        return false;
+
+    pos++;
+
+    if (!match("("))
+    {
+        errorMessage =
+            "Expected '('";
+
+        return false;
+    }
+
+    if (agg.type ==
+        AggregateType::COUNT)
+    {
+        if (pos < tokens.size() &&
+            tokens[pos].value == "*")
+        {
+            agg.countStar = true;
+
+            pos++;
+        }
+        else
+        {
+            errorMessage =
+                "Expected * inside COUNT";
+
+            return false;
+        }
+    }
+    else
+    {
+        if (pos >= tokens.size() ||
+            tokens[pos].type != "identifier")
+        {
+            errorMessage =
+                "Expected column name";
+
+            return false;
+        }
+
+        agg.column =
+            tokens[pos].value;
+
+        pos++;
+    }
+
+    if (!match(")"))
+    {
+        errorMessage =
+            "Expected ')'";
+
+        return false;
+    }
+
+    columns->aggregates.push_back(
+        agg);
+
+    return true;
+}
+
+
+bool Parser::parseGroupBy(QueryNode *query)
+{
+    if (pos >= tokens.size())
+        return true;
+
+    if (tokens[pos].value != "GROUP")
+        return true;
+
+    pos++;
+
+    if (pos >= tokens.size() ||
+        tokens[pos].value != "BY")
+    {
+        errorMessage =
+            "Expected BY after GROUP";
+
+        return false;
+    }
+
+    pos++;
+
+    GroupByNode* node =
+        new GroupByNode();
+
+    while (pos < tokens.size())
+    {
+        if (tokens[pos].type != "identifier")
+        {
+            errorMessage =
+                "Expected column name";
+
+            delete node;
+            return false;
+        }
+
+        node->columns.push_back(
+            tokens[pos].value);
+
+        pos++;
+
+        if (pos < tokens.size() &&
+            tokens[pos].value == ",")
+        {
+            pos++;
+        }
+        else
+        {
+            break;
+        }
+    }
+
+    query->groupBy = node;
+
+    return true;
+}
+
 QueryNode *Parser::parseSelect()
 {
     QueryNode *query = new QueryNode();
@@ -218,6 +389,12 @@ QueryNode *Parser::parseSelect()
     {
         freeQuery(query);
         return nullptr;
+    }
+    
+    if (!parseGroupBy(query))
+    {
+       freeQuery(query);
+       return nullptr;
     }
 
     if (!parseOrderBy(query))

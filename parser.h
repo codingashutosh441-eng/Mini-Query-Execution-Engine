@@ -23,6 +23,9 @@ private:
     bool parseWhere(QueryNode *query);
     bool parseOrderBy(QueryNode *query);
     bool parseLimit(QueryNode *query);
+    bool parseGroupBy(QueryNode *query);
+    bool parseAggregate(
+    ColumnNode* columns);
     ExpressionNode *parseConditionExpression();
 
     ExpressionNode *parsePrimary();

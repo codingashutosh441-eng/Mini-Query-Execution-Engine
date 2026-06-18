@@ -67,6 +67,18 @@ void printTree(QueryNode *root)
              << root->limit->count
              << endl;
     }
+    if (root->groupBy != nullptr)
+    {
+        cout << "  GroupBy" << endl;
+
+        for (string column :
+             root->groupBy->columns)
+        {
+            cout << "    Column: "
+                 << column
+                 << endl;
+        }
+    }
 }
 
 void printExpressionTree(ExpressionNode *node, int level)
@@ -125,9 +137,12 @@ void freeQuery(QueryNode *query)
 
     delete query->table;
 
+    delete query->groupBy;
+
     delete query->orderBy;
 
     delete query->limit;
+
 
     freeExpressionTree(
         query->whereExpression);
@@ -135,7 +150,7 @@ void freeQuery(QueryNode *query)
     delete query;
 }
 
-void freeDelete(DeleteNode* node)
+void freeDelete(DeleteNode *node)
 {
     if (!node)
         return;
