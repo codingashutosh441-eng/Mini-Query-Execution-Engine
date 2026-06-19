@@ -37,6 +37,15 @@ struct AggregateNode
     bool countStar = false;
 };
 
+struct HavingNode
+{
+    AggregateNode aggregate;
+
+    string op;
+
+    string value;
+};
+
 struct ColumnDefinitionNode
 {
     string name;
@@ -99,6 +108,7 @@ struct QueryNode
     LimitNode* limit = nullptr;
 
     GroupByNode* groupBy = nullptr;
+    HavingNode* having = nullptr;
 };
 
 struct InsertValueNode

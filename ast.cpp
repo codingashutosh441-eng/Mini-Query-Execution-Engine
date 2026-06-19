@@ -139,6 +139,8 @@ void freeQuery(QueryNode *query)
 
     delete query->groupBy;
 
+    delete query->having;
+
     delete query->orderBy;
 
     delete query->limit;

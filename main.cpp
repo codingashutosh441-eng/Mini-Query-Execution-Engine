@@ -18,8 +18,29 @@ int main()
 {
     Database db;
 
+    db.createIndex(
+        "students",
+        "age");
+
+   
+
     StorageManager::loadDatabase(
-    db);
+        db);
+
+     cout << db.createIndex(
+    "students",
+    "age")
+     << endl;
+
+     vector<Row> rows =
+    db.lookupIndex(
+        "students",
+        "age",
+        "20");
+
+cout
+    << rows.size()
+    << endl;
 
     // Read multiline query until ';'
     while (true)

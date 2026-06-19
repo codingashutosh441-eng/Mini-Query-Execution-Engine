@@ -185,17 +185,64 @@ void Executor::execute(QueryNode *query)
 
     vector<Row> resultRows;
 
-    for (const auto &row : table->rows)
+    bool usedIndex = false;
+
+    if (query->whereExpression != nullptr &&
+        !query->whereExpression->isLogical &&
+        query->whereExpression->op == "=")
     {
-        if (!evaluateExpression(
-                row,
-                query->table->tableName,
-                query->whereExpression))
+        string column =
+            query->whereExpression->column;
+
+        string value =
+            query->whereExpression->value;
+
+        if (query->whereExpression->valueType ==
+            DataType::STRING)
         {
-            continue;
+            if (value.size() >= 2 &&
+                value.front() == '\'' &&
+                value.back() == '\'')
+            {
+                value =
+                    value.substr(
+                        1,
+                        value.size() - 2);
+            }
         }
 
-        resultRows.push_back(row);
+        if (db->hasIndex(
+                query->table->tableName,
+                column))
+        {
+            resultRows =
+                db->lookupIndex(
+                    query->table->tableName,
+                    column,
+                    value);
+
+            usedIndex = true;
+
+            cout
+                << "[INDEX USED]"
+                << endl;
+        }
+    }
+
+    if (!usedIndex)
+    {
+        for (const auto &row : table->rows)
+        {
+            if (!evaluateExpression(
+                    row,
+                    query->table->tableName,
+                    query->whereExpression))
+            {
+                continue;
+            }
+
+            resultRows.push_back(row);
+        }
     }
 
     if (!query->columns->aggregates.empty())
@@ -882,7 +929,24 @@ void Executor::executeGroupBy(
             }
         }
         results.push_back(result);
-        //cout << "DEBUG RESULT ADDED" << endl;
+        // cout << "DEBUG RESULT ADDED" << endl;
+    }
+
+    if (query->having != nullptr)
+    {
+        vector<GroupResult> filtered;
+
+        for (const auto &result : results)
+        {
+            if (passesHaving(
+                    result,
+                    query))
+            {
+                filtered.push_back(result);
+            }
+        }
+
+        results = filtered;
     }
 
     if (query->orderBy != nullptr)
@@ -925,4 +989,48 @@ void Executor::executeGroupBy(
 
         cout << endl;
     }
+}
+
+bool Executor::passesHaving(
+    const GroupResult &result,
+    QueryNode *query)
+{
+    if (query->having == nullptr)
+    {
+        return true;
+    }
+
+    if (result.aggregateValues.empty())
+    {
+        return false;
+    }
+
+    double left =
+        stod(result.aggregateValues[0]);
+
+    double right =
+        stod(query->having->value);
+
+    string op =
+        query->having->op;
+
+    if (op == "=")
+        return left == right;
+
+    if (op == "!=")
+        return left != right;
+
+    if (op == ">")
+        return left > right;
+
+    if (op == "<")
+        return left < right;
+
+    if (op == ">=")
+        return left >= right;
+
+    if (op == "<=")
+        return left <= right;
+
+    return false;
 }

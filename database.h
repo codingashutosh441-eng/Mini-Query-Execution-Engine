@@ -45,11 +45,23 @@ public:
     void insert(const Row &row);
 };
 
+struct Index
+{
+    string tableName;
+    string columnName;
+
+    unordered_map<
+        string,
+        vector<int>>
+        rowPositions;
+};
+
 class Database
 {
 private:
     unordered_map<string, Table> tables;
     unordered_map<string, TableSchema> schemas;
+    unordered_map<string, Index> indexes;
 
 public:
     Database();
@@ -65,6 +77,19 @@ public:
     bool createSchema(
         const string &tableName,
         const vector<ColumnInfo> &columns);
+
+    bool createIndex(
+        const string &tableName,
+        const string &columnName);
+
+    bool hasIndex(
+        const string &tableName,
+        const string &columnName);
+
+    vector<Row> lookupIndex(
+        const string &tableName,
+        const string &columnName,
+        const string &value);
 
     const TableSchema *getSchema(
         const string &tableName) const;

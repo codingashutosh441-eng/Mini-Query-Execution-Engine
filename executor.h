@@ -56,6 +56,10 @@ private:
         const string &tableName,
         QueryNode *query);
 
+    bool passesHaving(
+        const GroupResult &result,
+        QueryNode *query);
+
     long long calculateCount(
         const vector<Row> &rows);
 

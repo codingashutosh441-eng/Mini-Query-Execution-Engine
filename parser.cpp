@@ -356,6 +356,158 @@ bool Parser::parseGroupBy(QueryNode *query)
     return true;
 }
 
+bool Parser::parseHaving(QueryNode *query)
+{
+    if (pos >= tokens.size())
+        return true;
+
+    if (tokens[pos].value != "HAVING")
+        return true;
+
+    pos++;
+
+    HavingNode* node =
+        new HavingNode();
+
+    // -------------------------
+    // Aggregate Function
+    // -------------------------
+
+    if (pos >= tokens.size())
+    {
+        errorMessage =
+            "Expected aggregate function";
+
+        delete node;
+        return false;
+    }
+
+    string func =
+        tokens[pos].value;
+
+    if (func == "COUNT")
+        node->aggregate.type = AggregateType::COUNT;
+
+    else if (func == "SUM")
+        node->aggregate.type = AggregateType::SUM;
+
+    else if (func == "AVG")
+        node->aggregate.type = AggregateType::AVG;
+
+    else if (func == "MIN")
+        node->aggregate.type = AggregateType::MIN;
+
+    else if (func == "MAX")
+        node->aggregate.type = AggregateType::MAX;
+
+    else
+    {
+        errorMessage =
+            "Expected aggregate function";
+
+        delete node;
+        return false;
+    }
+
+    pos++;
+
+    if (!match("("))
+    {
+        errorMessage =
+            "Expected '('";
+
+        delete node;
+        return false;
+    }
+
+    if (node->aggregate.type ==
+        AggregateType::COUNT)
+    {
+        if (pos < tokens.size() &&
+            tokens[pos].value == "*")
+        {
+            node->aggregate.countStar = true;
+            pos++;
+        }
+        else
+        {
+            errorMessage =
+                "Expected * inside COUNT";
+
+            delete node;
+            return false;
+        }
+    }
+    else
+    {
+        if (pos >= tokens.size() ||
+            tokens[pos].type != "identifier")
+        {
+            errorMessage =
+                "Expected column name";
+
+            delete node;
+            return false;
+        }
+
+        node->aggregate.column =
+            tokens[pos].value;
+
+        pos++;
+    }
+
+    if (!match(")"))
+    {
+        errorMessage =
+            "Expected ')'";
+
+        delete node;
+        return false;
+    }
+
+    // -------------------------
+    // Operator
+    // -------------------------
+
+    if (pos >= tokens.size() ||
+        tokens[pos].type != "operator")
+    {
+        errorMessage =
+            "Expected operator";
+
+        delete node;
+        return false;
+    }
+
+    node->op =
+        tokens[pos].value;
+
+    pos++;
+
+    // -------------------------
+    // Value
+    // -------------------------
+
+    if (pos >= tokens.size() ||
+        tokens[pos].type != "digit")
+    {
+        errorMessage =
+            "Expected numeric value";
+
+        delete node;
+        return false;
+    }
+
+    node->value =
+        tokens[pos].value;
+
+    pos++;
+
+    query->having = node;
+
+    return true;
+}
+
 QueryNode *Parser::parseSelect()
 {
     QueryNode *query = new QueryNode();
@@ -395,6 +547,12 @@ QueryNode *Parser::parseSelect()
     {
        freeQuery(query);
        return nullptr;
+    }
+
+    if (!parseHaving(query))
+    {
+        freeQuery(query);
+        return nullptr;
     }
 
     if (!parseOrderBy(query))

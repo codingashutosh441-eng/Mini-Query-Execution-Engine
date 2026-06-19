@@ -241,6 +241,48 @@ bool SemanticAnalyzer::validate(QueryNode *query)
                 return false;
             }
         }
+
+        if (query->having != nullptr)
+        {
+            if (query->groupBy == nullptr)
+            {
+                errorMessage =
+                    "HAVING requires GROUP BY";
+
+                return false;
+            }
+
+            AggregateNode agg =
+                query->having->aggregate;
+
+            if (agg.type != AggregateType::COUNT)
+            {
+                if (!columnExists(
+                        tableName,
+                        agg.column))
+                {
+                    errorMessage =
+                        "Unknown column: " +
+                        agg.column;
+
+                    return false;
+                }
+
+                DataType type =
+                    getColumnType(
+                        tableName,
+                        agg.column);
+
+                if (type != DataType::INT)
+                {
+                    errorMessage =
+                        "Aggregate requires numeric column: " +
+                        agg.column;
+
+                    return false;
+                }
+            }
+        }
     }
 
     if (query->groupBy != nullptr)

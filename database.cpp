@@ -34,6 +34,32 @@ void Database::insertRow(const string &tableName, const Row &row)
     }
 
     tables[tableName].insert(row);
+    for (auto &pair : indexes)
+    {
+        Index &index = pair.second;
+
+        if (index.tableName != tableName)
+        {
+            continue;
+        }
+
+        int columnIndex =
+            getColumnIndex(
+                tableName,
+                index.columnName);
+
+        string value =
+            row.values[columnIndex].value;
+
+        int rowPosition =
+            static_cast<int>(
+                tables[tableName]
+                    .rows.size() -
+                1);
+
+        index.rowPositions[value]
+            .push_back(rowPosition);
+    }
 }
 
 Table *Database::getTable(const string &tableName)
@@ -162,24 +188,126 @@ const TableSchema *Database::getSchema(
     return &(it->second);
 }
 
-const unordered_map<string, TableSchema>&
+const unordered_map<string, TableSchema> &
 Database::getSchemas() const
 {
     return schemas;
 }
 
 void Database::addLoadedSchema(
-    const TableSchema& schema)
+    const TableSchema &schema)
 {
     schemas[schema.tableName] =
         schema;
 }
 
 void Database::addLoadedTable(
-    const Table& table)
+    const Table &table)
 {
     tables[table.tableName] =
         table;
 }
 
+bool Database::createIndex(
+    const string &tableName,
+    const string &columnName)
+{
+    if (!tableExists(tableName))
+    {
+        return false;
+    }
 
+    if (!columnExists(
+            tableName,
+            columnName))
+    {
+        return false;
+    }
+
+    string key =
+        tableName + "." +
+        columnName;
+
+    Index index;
+
+    index.tableName =
+        tableName;
+
+    index.columnName =
+        columnName;
+
+    Table *table =
+        getTable(tableName);
+
+    int columnIndex =
+        getColumnIndex(
+            tableName,
+            columnName);
+
+    for (size_t rowPos = 0;
+         rowPos < table->rows.size();
+         rowPos++)
+    {
+        string value =
+            table->rows[rowPos]
+                .values[columnIndex]
+                .value;
+
+        index.rowPositions[value]
+            .push_back(
+                static_cast<int>(
+                    rowPos));
+    }
+
+    indexes[key] = index;
+
+    return true;
+}
+
+bool Database::hasIndex(
+    const string &tableName,
+    const string &columnName)
+{
+    string key =
+        tableName + "." +
+        columnName;
+
+    return indexes.count(key);
+}
+
+vector<Row> Database::lookupIndex(
+    const string &tableName,
+    const string &columnName,
+    const string &value)
+{
+    vector<Row> result;
+
+    string key =
+        tableName + "." +
+        columnName;
+
+    if (!indexes.count(key))
+    {
+        return result;
+    }
+
+    Table *table =
+        getTable(tableName);
+
+    auto &index =
+        indexes[key];
+
+    if (!index.rowPositions.count(value))
+    {
+        return result;
+    }
+
+    for (int rowPos :
+         index.rowPositions[value])
+    {
+        result.push_back(
+            table->rows[rowPos]);
+    }
+
+    return result;
+}
