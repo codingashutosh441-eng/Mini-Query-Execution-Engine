@@ -1324,6 +1324,61 @@ vector<Row> Executor::executeJoin(
             rightTable,
             rightColumn);
 
+    if (type == JoinType::RIGHT)
+    {
+        size_t leftCols =
+            left->rows[0].values.size();
+
+        for (const auto &rightRow : right->rows)
+        {
+            bool matched = false;
+
+            for (const auto &leftRow : left->rows)
+            {
+                if (leftRow.values[leftIdx].value ==
+                    rightRow.values[rightIdx].value)
+                {
+                    matched = true;
+
+                    Row merged;
+
+                    merged.values =
+                        leftRow.values;
+
+                    merged.values.insert(
+                        merged.values.end(),
+                        rightRow.values.begin(),
+                        rightRow.values.end());
+
+                    result.push_back(merged);
+                }
+            }
+
+            if (!matched)
+            {
+                Row merged;
+
+                for (size_t i = 0;
+                     i < leftCols;
+                     i++)
+                {
+                    merged.values.push_back(
+                        {"NULL",
+                         DataType::STRING});
+                }
+
+                merged.values.insert(
+                    merged.values.end(),
+                    rightRow.values.begin(),
+                    rightRow.values.end());
+
+                result.push_back(merged);
+            }
+        }
+
+        return result;
+    }
+
     for (const auto &leftRow : left->rows)
     {
         bool matched = false;

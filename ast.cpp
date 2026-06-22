@@ -92,6 +92,8 @@ void printTree(QueryNode *root)
                 cout << "INNER";
             }else if(join.type == JoinType::LEFT){
                 cout<<"LEFT";
+            }else if(join.type == JoinType::RIGHT){
+                cout<<"RIGHT";
             }
 
             cout << " JOIN "

@@ -1312,7 +1312,8 @@ bool Parser::parseJoins(QueryNode *query)
 {
     while (pos < tokens.size() &&
                (tokens[pos].value == "INNER" ||
-           tokens[pos].value == "LEFT"))
+           tokens[pos].value == "LEFT"||
+           tokens[pos].value == "RIGHT"))
     {
         JoinNode join;
 
@@ -1323,6 +1324,9 @@ bool Parser::parseJoins(QueryNode *query)
         else if(tokens[pos].value == "LEFT")
         {
             join.type = JoinType::LEFT;
+        }else if(tokens[pos].value == "RIGHT")
+        {
+            join.type = JoinType::RIGHT;
         }
 
         pos++;
