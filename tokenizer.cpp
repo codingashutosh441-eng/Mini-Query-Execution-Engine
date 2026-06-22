@@ -9,9 +9,10 @@ set<string> mysqlKeywords =
     {
         "CREATE","TABLE","INT","STRING","SELECT",
         "FROM", "WHERE","INSERT", "UPDATE", "DELETE",
-        "ORDER", "BY", "ASC", "DESC",
+        "ORDER", "BY", "ASC", "DESC", 
         "LIMIT","INTO", "VALUES", "SET","AND", "OR",
-        "COUNT","SUM","AVG","MIN","MAX", "HAVING"
+        "COUNT","SUM","AVG","MIN","MAX", "HAVING","GROUP",
+        "INNER","JOIN", "ON", "LEFT","RIGHT"
     };
 
 set<string> ops =

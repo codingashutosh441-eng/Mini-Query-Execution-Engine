@@ -11,7 +11,7 @@ using namespace std;
 
 struct GroupResult
 {
-    string groupKey;
+    vector<string> groupValues;
 
     vector<string> aggregateValues;
 };
@@ -65,23 +65,51 @@ private:
 
     long long calculateSum(
         const vector<Row> &rows,
+        QueryNode *query,
         const string &tableName,
         const string &column);
 
     double calculateAvg(
         const vector<Row> &rows,
+        QueryNode *query,
         const string &tableName,
         const string &column);
 
     string calculateMin(
         const vector<Row> &rows,
+        QueryNode *query,
         const string &tableName,
         const string &column);
 
     string calculateMax(
         const vector<Row> &rows,
+        QueryNode *query,
         const string &tableName,
         const string &column);
+
+    vector<Row> executeJoin(
+        JoinType type,
+        const string &leftTable,
+        const string &rightTable,
+        const string &leftColumn,
+        const string &rightColumn);
+
+    vector<string> getJoinColumnNames(
+        const string &leftTable,
+        const string &rightTable);
+
+    int findJoinedColumnIndex(
+        QueryNode *query,
+        const string &columnName);
+
+    bool evaluateJoinedLeafCondition(
+        const Row &row,
+        QueryNode *query,
+        ExpressionNode *node);
+    int getJoinedCellInt(
+        const Row &row,
+        QueryNode *query,
+        const string &columnName);
 
 public:
     Executor(Database *database);

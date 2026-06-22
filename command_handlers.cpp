@@ -195,7 +195,7 @@ void handleSelect(
     }
 
     // QUERY PLANNER
-    Planner planner;
+    Planner planner(&db);
 
     planner.createPlan(query);
 
@@ -251,4 +251,55 @@ void handleDelete(
         deleteNode);
 
     freeDelete(deleteNode);
+}
+
+void handleCreateIndex(
+    Parser& parser,
+    SemanticAnalyzer& analyzer,
+    Database& db)
+{
+    CreateIndexNode* node =
+        parser.parseCreateIndex();
+
+    if (!node)
+    {
+        cout << "Syntax Error: "
+             << parser.getError()
+             << endl;
+
+        return;
+    }
+
+    if (!analyzer.validateCreateIndex(node))
+    {
+        cout << "Semantic Error:\n"
+             << analyzer.errorMessage
+             << endl;
+
+        delete node;
+        return;
+    }
+
+    bool success =
+        db.createIndex(
+            node->tableName,
+            node->columnName);
+
+    if (success)
+    {
+        StorageManager::saveIndex(
+        node->tableName,
+        node->columnName);
+        cout
+            << "Index created successfully"
+            << endl;
+    }
+    else
+    {
+        cout
+            << "Index already exists"
+            << endl;
+    }
+
+    delete node;
 }

@@ -1,5 +1,11 @@
 #include "planner.h"
 
+Planner::Planner(
+    Database *database)
+{
+    db = database;
+}
+
 string Planner::expressionToString(
     ExpressionNode *node)
 {
@@ -37,12 +43,40 @@ void Planner::createPlan(QueryNode *query)
 
     if (query->table != nullptr)
     {
+        bool useIndex = false;
+
+        if (query->whereExpression != nullptr &&
+            !query->whereExpression->isLogical &&
+            query->whereExpression->op == "=")
+        {
+            if (db->hasIndex(
+                    query->table->tableName,
+                    query->whereExpression->column))
+            {
+                useIndex = true;
+            }
+        }
+
         ExecutionStep step;
 
-        step.type = StepType::SCAN;
+        if (useIndex)
+        {
+            step.type =
+                StepType::INDEX_SEEK;
 
-        step.details =
-            query->table->tableName;
+            step.details =
+                query->table->tableName +
+                "." +
+                query->whereExpression->column;
+        }
+        else
+        {
+            step.type =
+                StepType::SCAN;
+
+            step.details =
+                query->table->tableName;
+        }
 
         steps.push_back(step);
     }
@@ -222,7 +256,14 @@ void Planner::printPlan()
             cout << "AGGREGATE "
                  << step.details;
         }
-        
+        else if (
+            step.type ==
+            StepType::INDEX_SEEK)
+        {
+            cout
+                << "INDEX SEEK "
+                << step.details;
+        }
 
         cout << endl
              << endl;

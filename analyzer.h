@@ -36,6 +36,8 @@ public:
     bool validateInsert(InsertNode* node);
     bool validateUpdate(UpdateNode* node);
     bool validateDelete(DeleteNode* node);
+    bool validateCreateIndex(
+    CreateIndexNode* node);
 };
 
 #endif

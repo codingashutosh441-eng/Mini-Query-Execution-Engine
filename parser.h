@@ -25,6 +25,7 @@ private:
     bool parseLimit(QueryNode *query);
     bool parseGroupBy(QueryNode *query);
     bool parseHaving(QueryNode* query);
+    bool parseJoins(QueryNode* query);
     bool parseAggregate(
     ColumnNode* columns);
     ExpressionNode *parseConditionExpression();
@@ -46,6 +47,7 @@ public:
     InsertNode* parseInsert();
     UpdateNode* parseUpdate();
     DeleteNode* parseDelete();
+    CreateIndexNode* parseCreateIndex();
 
 };
 

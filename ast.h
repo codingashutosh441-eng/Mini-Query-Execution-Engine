@@ -23,6 +23,23 @@ enum class AggregateType
     MAX
 };
 
+enum class JoinType
+{
+    INNER,
+    LEFT, RIGHT
+};
+
+struct JoinNode
+{
+    JoinType type;
+
+    string rightTable;
+
+    string leftColumn;
+
+    string rightColumn;
+};
+
 struct GroupByNode
 {
     vector<string> columns;
@@ -44,6 +61,15 @@ struct HavingNode
     string op;
 
     string value;
+};
+
+struct CreateIndexNode
+{
+    string indexName;
+
+    string tableName;
+
+    string columnName;
 };
 
 struct ColumnDefinitionNode
@@ -102,6 +128,7 @@ struct QueryNode
 {
     ColumnNode* columns = nullptr;
     TableNode* table = nullptr;
+    vector<JoinNode> joins;
     ExpressionNode* whereExpression = nullptr;
 
     OrderByNode* orderBy = nullptr;
@@ -109,6 +136,7 @@ struct QueryNode
 
     GroupByNode* groupBy = nullptr;
     HavingNode* having = nullptr;
+    
 };
 
 struct InsertValueNode

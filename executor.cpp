@@ -3,6 +3,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <algorithm>
+#include <sstream>
 
 using namespace std;
 
@@ -179,6 +180,51 @@ void Executor::execute(QueryNode *query)
         return;
     }
 
+    vector<Row> sourceRows;
+
+    if (!query->joins.empty())
+    {
+        const JoinNode &join =
+            query->joins[0];
+
+        sourceRows =
+            executeJoin(
+                join.type,
+                query->table->tableName,
+                join.rightTable,
+                join.leftColumn,
+                join.rightColumn);
+
+        if (query->whereExpression)
+        {
+            vector<Row> filtered;
+
+            for (const auto &row :
+                 sourceRows)
+            {
+                if (evaluateJoinedLeafCondition(
+                        row,
+                        query,
+                        query->whereExpression))
+                {
+                    filtered.push_back(row);
+                }
+            }
+
+            sourceRows = filtered;
+        }
+
+        cout
+            << "[JOIN ROWS: "
+            << sourceRows.size()
+            << "]"
+            << endl;
+    }
+    else
+    {
+        sourceRows = table->rows;
+    }
+
     // -------------------------
     // FILTER PHASE
     // -------------------------
@@ -215,11 +261,22 @@ void Executor::execute(QueryNode *query)
                 query->table->tableName,
                 column))
         {
-            resultRows =
+            vector<Row> candidateRows =
                 db->lookupIndex(
                     query->table->tableName,
                     column,
                     value);
+
+            for (const auto &row : candidateRows)
+            {
+                if (evaluateExpression(
+                        row,
+                        query->table->tableName,
+                        query->whereExpression))
+                {
+                    resultRows.push_back(row);
+                }
+            }
 
             usedIndex = true;
 
@@ -229,9 +286,9 @@ void Executor::execute(QueryNode *query)
         }
     }
 
-    if (!usedIndex)
+    if (!usedIndex && query->joins.empty())
     {
-        for (const auto &row : table->rows)
+        for (const auto &row : sourceRows)
         {
             if (!evaluateExpression(
                     row,
@@ -243,6 +300,11 @@ void Executor::execute(QueryNode *query)
 
             resultRows.push_back(row);
         }
+    }
+
+    if (!query->joins.empty())
+    {
+        resultRows = sourceRows;
     }
 
     if (!query->columns->aggregates.empty())
@@ -286,10 +348,22 @@ void Executor::execute(QueryNode *query)
             [&](const Row &a,
                 const Row &b)
             {
-                int idx =
-                    db->getColumnIndex(
-                        query->table->tableName,
-                        column);
+                int idx;
+
+                if (!query->joins.empty())
+                {
+                    idx =
+                        findJoinedColumnIndex(
+                            query,
+                            column);
+                }
+                else
+                {
+                    idx =
+                        db->getColumnIndex(
+                            query->table->tableName,
+                            column);
+                }
 
                 if (idx < 0)
                 {
@@ -346,16 +420,34 @@ void Executor::execute(QueryNode *query)
 
     if (query->columns->selectAll)
     {
-        const TableSchema *schema =
-            db->getSchema(
-                query->table->tableName);
-
-        for (const auto &column :
-             schema->columns)
+        if (!query->joins.empty())
         {
-            cout
-                << column.name
-                << "\t";
+            auto columns =
+                getJoinColumnNames(
+                    query->table->tableName,
+                    query->joins[0].rightTable);
+
+            for (const auto &column :
+                 columns)
+            {
+                cout
+                    << column
+                    << "\t";
+            }
+        }
+        else
+        {
+            const TableSchema *schema =
+                db->getSchema(
+                    query->table->tableName);
+
+            for (const auto &column :
+                 schema->columns)
+            {
+                cout
+                    << column.name
+                    << "\t";
+            }
         }
 
         cout << endl;
@@ -402,10 +494,22 @@ void Executor::execute(QueryNode *query)
             for (const auto &col :
                  query->columns->columns)
             {
-                int idx =
-                    db->getColumnIndex(
-                        query->table->tableName,
-                        col);
+                int idx;
+
+                if (!query->joins.empty())
+                {
+                    idx =
+                        findJoinedColumnIndex(
+                            query,
+                            col);
+                }
+                else
+                {
+                    idx =
+                        db->getColumnIndex(
+                            query->table->tableName,
+                            col);
+                }
 
                 if (idx >= 0)
                 {
@@ -547,6 +651,7 @@ void Executor::executeUpdate(
     {
         StorageManager::saveTable(
             *table);
+        db->rebuildIndexes();
     }
 
     cout
@@ -602,12 +707,39 @@ void Executor::executeDelete(
     {
         StorageManager::saveTable(
             *table);
+        db->rebuildIndexes();
     }
 
     cout
         << deletedRows
         << " row(s) deleted"
         << endl;
+}
+
+int Executor::getJoinedCellInt(
+    const Row &row,
+    QueryNode *query,
+    const string &columnName)
+{
+    int idx =
+        findJoinedColumnIndex(
+            query,
+            columnName);
+
+    if (idx < 0)
+    {
+        return 0;
+    }
+
+    string value =
+        row.values[idx].value;
+
+    if (value == "NULL")
+    {
+        return 0;
+    }
+
+    return stoi(value);
 }
 
 long long Executor::calculateCount(
@@ -618,6 +750,7 @@ long long Executor::calculateCount(
 
 long long Executor::calculateSum(
     const vector<Row> &rows,
+    QueryNode *query,
     const string &tableName,
     const string &column)
 {
@@ -625,18 +758,29 @@ long long Executor::calculateSum(
 
     for (const auto &row : rows)
     {
-        total +=
-            getCellInt(
-                row,
-                tableName,
-                column);
+        if (!query->joins.empty())
+        {
+            total +=
+                getJoinedCellInt(
+                    row,
+                    query,
+                    column);
+        }
+        else
+        {
+            total +=
+                getCellInt(
+                    row,
+                    tableName,
+                    column);
+        }
     }
-
     return total;
 }
 
 double Executor::calculateAvg(
     const vector<Row> &rows,
+    QueryNode *query,
     const string &tableName,
     const string &column)
 {
@@ -648,6 +792,7 @@ double Executor::calculateAvg(
     long long total =
         calculateSum(
             rows,
+            query,
             tableName,
             column);
 
@@ -656,6 +801,7 @@ double Executor::calculateAvg(
 
 string Executor::calculateMin(
     const vector<Row> &rows,
+    QueryNode *query,
     const string &tableName,
     const string &column)
 {
@@ -664,21 +810,48 @@ string Executor::calculateMin(
         return "";
     }
 
-    int minValue =
-        getCellInt(
-            rows[0],
-            tableName,
-            column);
+    int minValue;
+
+    if (!query->joins.empty())
+    {
+        minValue =
+            getJoinedCellInt(
+                rows[0],
+                query,
+                column);
+    }
+    else
+    {
+        minValue =
+            getCellInt(
+                rows[0],
+                tableName,
+                column);
+    }
 
     for (const auto &row : rows)
     {
-        minValue =
-            min(
-                minValue,
+        int value;
+
+        if (!query->joins.empty())
+        {
+            value =
+                getJoinedCellInt(
+                    row,
+                    query,
+                    column);
+        }
+        else
+        {
+            value =
                 getCellInt(
                     row,
                     tableName,
-                    column));
+                    column);
+        }
+
+        minValue =
+            min(minValue, value);
     }
 
     return to_string(minValue);
@@ -686,6 +859,7 @@ string Executor::calculateMin(
 
 string Executor::calculateMax(
     const vector<Row> &rows,
+    QueryNode *query,
     const string &tableName,
     const string &column)
 {
@@ -694,21 +868,48 @@ string Executor::calculateMax(
         return "";
     }
 
-    int maxValue =
-        getCellInt(
-            rows[0],
-            tableName,
-            column);
+    int maxValue;
+
+    if (!query->joins.empty())
+    {
+        maxValue =
+            getJoinedCellInt(
+                rows[0],
+                query,
+                column);
+    }
+    else
+    {
+        maxValue =
+            getCellInt(
+                rows[0],
+                tableName,
+                column);
+    }
 
     for (const auto &row : rows)
     {
-        maxValue =
-            max(
-                maxValue,
+        int value;
+
+        if (!query->joins.empty())
+        {
+            value =
+                getJoinedCellInt(
+                    row,
+                    query,
+                    column);
+        }
+        else
+        {
+            value =
                 getCellInt(
                     row,
                     tableName,
-                    column));
+                    column);
+        }
+
+        maxValue =
+            max(maxValue, value);
     }
 
     return to_string(maxValue);
@@ -746,6 +947,7 @@ void Executor::executeAggregate(
 
             cout << calculateSum(
                         rows,
+                        query,
                         tableName,
                         agg.column)
                  << endl;
@@ -762,6 +964,7 @@ void Executor::executeAggregate(
 
             cout << calculateAvg(
                         rows,
+                        query,
                         tableName,
                         agg.column)
                  << endl;
@@ -778,6 +981,7 @@ void Executor::executeAggregate(
 
             cout << calculateMin(
                         rows,
+                        query,
                         tableName,
                         agg.column)
                  << endl;
@@ -794,6 +998,7 @@ void Executor::executeAggregate(
 
             cout << calculateMax(
                         rows,
+                        query,
                         tableName,
                         agg.column)
                  << endl;
@@ -809,8 +1014,7 @@ void Executor::executeGroupBy(
     const string &tableName,
     QueryNode *query)
 {
-    string groupColumn =
-        query->groupBy->columns[0];
+    // string groupColumn =query->groupBy->columns[0];
 
     unordered_map<
         string,
@@ -821,18 +1025,51 @@ void Executor::executeGroupBy(
 
     for (const auto &row : rows)
     {
-        string key =
-            getCellValue(
-                row,
-                tableName,
-                groupColumn);
+        string key;
+
+        for (const auto &column :
+             query->groupBy->columns)
+        {
+            string value;
+
+            if (!query->joins.empty())
+            {
+                int idx =
+                    findJoinedColumnIndex(
+                        query,
+                        column);
+
+                if (idx >= 0)
+                {
+                    value =
+                        row.values[idx].value;
+                }
+            }
+            else
+            {
+                value =
+                    getCellValue(
+                        row,
+                        tableName,
+                        column);
+            }
+
+            key += value;
+            key += "|";
+        }
 
         groups[key].push_back(row);
     }
 
     cout << "\nRESULT\n\n";
 
-    cout << groupColumn << "\t";
+    for (const auto &column :
+         query->groupBy->columns)
+    {
+        cout
+            << column
+            << "\t";
+    }
 
     for (const auto &agg :
          query->columns->aggregates)
@@ -873,7 +1110,21 @@ void Executor::executeGroupBy(
 
         GroupResult result;
 
-        result.groupKey = pair.first;
+        stringstream ss(pair.first);
+
+        string value;
+
+        while (getline(
+            ss,
+            value,
+            '|'))
+        {
+            if (!value.empty())
+            {
+                result.groupValues.push_back(
+                    value);
+            }
+        }
 
         // cout << pair.first << "\t";
 
@@ -896,6 +1147,7 @@ void Executor::executeGroupBy(
                     to_string(
                         calculateSum(
                             groupRows,
+                            query,
                             tableName,
                             agg.column)));
                 break;
@@ -905,6 +1157,7 @@ void Executor::executeGroupBy(
                     to_string(
                         calculateAvg(
                             groupRows,
+                            query,
                             tableName,
                             agg.column)));
                 break;
@@ -913,6 +1166,7 @@ void Executor::executeGroupBy(
                 result.aggregateValues.push_back(
                     calculateMin(
                         groupRows,
+                        query,
                         tableName,
                         agg.column));
                 break;
@@ -921,6 +1175,7 @@ void Executor::executeGroupBy(
                 result.aggregateValues.push_back(
                     calculateMax(
                         groupRows,
+                        query,
                         tableName,
                         agg.column));
                 break;
@@ -949,35 +1204,39 @@ void Executor::executeGroupBy(
         results = filtered;
     }
 
-    if (query->orderBy != nullptr)
-    {
-        bool ascending =
-            query->orderBy->direction == "ASC";
+    // if (query->orderBy != nullptr)
+    // {
+    //     bool ascending =
+    //         query->orderBy->direction == "ASC";
 
-        sort(
-            results.begin(),
-            results.end(),
-            [&](const GroupResult &a,
-                const GroupResult &b)
-            {
-                int left =
-                    stoi(a.groupKey);
+    //     sort(
+    //         results.begin(),
+    //         results.end(),
+    //         [&](const GroupResult &a,
+    //             const GroupResult &b)
+    //         {
+    //             int left =
+    //                 stoi(a.groupKey);
 
-                int right =
-                    stoi(b.groupKey);
+    //             int right =
+    //                 stoi(b.groupKey);
 
-                return ascending
-                           ? left < right
-                           : left > right;
-            });
-    }
+    //             return ascending
+    //                        ? left < right
+    //                        : left > right;
+    //         });
+    // }
 
     for (const auto &result :
          results)
     {
-        cout
-            << result.groupKey
-            << "\t";
+        for (const auto &value :
+             result.groupValues)
+        {
+            cout
+                << value
+                << "\t";
+        }
 
         for (const auto &value :
              result.aggregateValues)
@@ -1031,6 +1290,213 @@ bool Executor::passesHaving(
 
     if (op == "<=")
         return left <= right;
+
+    return false;
+}
+
+vector<Row> Executor::executeJoin(
+    JoinType type,
+    const string &leftTable,
+    const string &rightTable,
+    const string &leftColumn,
+    const string &rightColumn)
+{
+    vector<Row> result;
+
+    Table *left =
+        db->getTable(leftTable);
+
+    Table *right =
+        db->getTable(rightTable);
+
+    if (!left || !right)
+    {
+        return result;
+    }
+
+    int leftIdx =
+        db->getColumnIndex(
+            leftTable,
+            leftColumn);
+
+    int rightIdx =
+        db->getColumnIndex(
+            rightTable,
+            rightColumn);
+
+    for (const auto &leftRow : left->rows)
+    {
+        bool matched = false;
+
+        for (const auto &rightRow : right->rows)
+        {
+            if (leftRow.values[leftIdx].value ==
+                rightRow.values[rightIdx].value)
+            {
+                matched = true;
+
+                Row merged;
+
+                merged.values =
+                    leftRow.values;
+
+                merged.values.insert(
+                    merged.values.end(),
+                    rightRow.values.begin(),
+                    rightRow.values.end());
+
+                result.push_back(merged);
+            }
+        }
+
+        if (!matched &&
+            type == JoinType::LEFT)
+        {
+            Row merged;
+
+            merged.values =
+                leftRow.values;
+
+            for (size_t i = 0;
+                 i < right->rows[0].values.size();
+                 i++)
+            {
+                merged.values.push_back(
+                    {"NULL",
+                     DataType::STRING});
+            }
+
+            result.push_back(merged);
+        }
+    }
+
+    return result;
+}
+
+vector<string> Executor::getJoinColumnNames(
+    const string &leftTable,
+    const string &rightTable)
+{
+    vector<string> columns;
+
+    const TableSchema *leftSchema =
+        db->getSchema(leftTable);
+
+    const TableSchema *rightSchema =
+        db->getSchema(rightTable);
+
+    if (leftSchema)
+    {
+        for (const auto &column :
+             leftSchema->columns)
+        {
+            columns.push_back(
+                column.name);
+        }
+    }
+
+    if (rightSchema)
+    {
+        for (const auto &column :
+             rightSchema->columns)
+        {
+            columns.push_back(
+                column.name);
+        }
+    }
+
+    return columns;
+}
+
+int Executor::findJoinedColumnIndex(
+    QueryNode *query,
+    const string &columnName)
+{
+    int index = 0;
+
+    const TableSchema *leftSchema =
+        db->getSchema(
+            query->table->tableName);
+
+    if (leftSchema)
+    {
+        for (const auto &column :
+             leftSchema->columns)
+        {
+            if (column.name == columnName)
+            {
+                return index;
+            }
+
+            index++;
+        }
+    }
+
+    const TableSchema *rightSchema =
+        db->getSchema(
+            query->joins[0].rightTable);
+
+    if (rightSchema)
+    {
+        for (const auto &column :
+             rightSchema->columns)
+        {
+            if (column.name == columnName)
+            {
+                return index;
+            }
+
+            index++;
+        }
+    }
+
+    return -1;
+}
+
+bool Executor::evaluateJoinedLeafCondition(
+    const Row &row,
+    QueryNode *query,
+    ExpressionNode *node)
+{
+    int idx =
+        findJoinedColumnIndex(
+            query,
+            node->column);
+
+    if (idx < 0)
+    {
+        return false;
+    }
+
+    string cellValue =
+        row.values[idx].value;
+
+    if (node->valueType == DataType::INT)
+    {
+        int left =
+            stoi(cellValue);
+
+        int right =
+            stoi(node->value);
+
+        if (node->op == "=")
+            return left == right;
+
+        if (node->op == "!=")
+            return left != right;
+
+        if (node->op == ">")
+            return left > right;
+
+        if (node->op == "<")
+            return left < right;
+
+        if (node->op == ">=")
+            return left >= right;
+
+        if (node->op == "<=")
+            return left <= right;
+    }
 
     return false;
 }

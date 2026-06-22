@@ -77,9 +77,42 @@ bool SemanticAnalyzer::validateExpression(
                validateExpression(node->right, tableName);
     }
 
-    if (!columnExists(tableName, node->column))
+    bool found =
+        columnExists(
+            tableName,
+            node->column);
+
+    if (!found)
     {
-        errorMessage = "Unknown column in WHERE: " + node->column;
+        // const TableSchema *leftSchema =
+        //     db->getSchema(
+        //         tableName);
+
+        for (const auto &pair :
+             db->getSchemas())
+        {
+            if (pair.first == tableName)
+            {
+                continue;
+            }
+
+            if (columnExists(
+                    pair.first,
+                    node->column))
+            {
+                found = true;
+                tableName = pair.first;
+                break;
+            }
+        }
+    }
+
+    if (!found)
+    {
+        errorMessage =
+            "Unknown column in WHERE: " +
+            node->column;
+
         return false;
     }
 
@@ -142,15 +175,71 @@ bool SemanticAnalyzer::validate(QueryNode *query)
         errorMessage = "Unknown table: " + tableName;
         return false;
     }
+    for (const auto &join : query->joins)
+    {
+        if (!tableExists(join.rightTable))
+        {
+            errorMessage =
+                "Unknown table: " +
+                join.rightTable;
+
+            return false;
+        }
+
+        if (!columnExists(
+                tableName,
+                join.leftColumn))
+        {
+            errorMessage =
+                "Unknown column: " +
+                join.leftColumn;
+
+            return false;
+        }
+
+        if (!columnExists(
+                join.rightTable,
+                join.rightColumn))
+        {
+            errorMessage =
+                "Unknown column: " +
+                join.rightColumn;
+
+            return false;
+        }
+    }
 
     // 🔹 Column validation
     if (query->columns && !query->columns->selectAll)
     {
-        for (string col : query->columns->columns)
+        for (const string &col :
+             query->columns->columns)
         {
-            if (!columnExists(tableName, col))
+            bool found =
+                columnExists(
+                    tableName,
+                    col);
+
+            if (!found)
             {
-                errorMessage = "Unknown column: " + col;
+                for (const auto &join :
+                     query->joins)
+                {
+                    if (columnExists(
+                            join.rightTable,
+                            col))
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!found)
+            {
+                errorMessage =
+                    "Unknown column: " + col;
+
                 return false;
             }
         }
@@ -168,11 +257,32 @@ bool SemanticAnalyzer::validate(QueryNode *query)
     // 🔹 ORDERBY validation
     if (query->orderBy != nullptr)
     {
-        if (!columnExists(tableName, query->orderBy->column))
+        bool found =
+            columnExists(
+                tableName,
+                query->orderBy->column);
+
+        if (!found)
+        {
+            for (const auto &join :
+                 query->joins)
+            {
+                if (columnExists(
+                        join.rightTable,
+                        query->orderBy->column))
+                {
+                    found = true;
+                    break;
+                }
+            }
+        }
+
+        if (!found)
         {
             errorMessage =
                 "Unknown column in ORDER BY: " +
                 query->orderBy->column;
+
             return false;
         }
 
@@ -257,9 +367,27 @@ bool SemanticAnalyzer::validate(QueryNode *query)
 
             if (agg.type != AggregateType::COUNT)
             {
-                if (!columnExists(
+                bool found =
+                    columnExists(
                         tableName,
-                        agg.column))
+                        agg.column);
+
+                if (!found)
+                {
+                    for (const auto &join :
+                         query->joins)
+                    {
+                        if (columnExists(
+                                join.rightTable,
+                                agg.column))
+                        {
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!found)
                 {
                     errorMessage =
                         "Unknown column: " +
@@ -290,7 +418,27 @@ bool SemanticAnalyzer::validate(QueryNode *query)
         for (const string &col :
              query->groupBy->columns)
         {
-            if (!columnExists(tableName, col))
+            bool found =
+                columnExists(
+                    tableName,
+                    col);
+
+            if (!found)
+            {
+                for (const auto &join :
+                     query->joins)
+                {
+                    if (columnExists(
+                            join.rightTable,
+                            col))
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!found)
             {
                 errorMessage =
                     "Unknown column in GROUP BY: " +
@@ -304,15 +452,34 @@ bool SemanticAnalyzer::validate(QueryNode *query)
     for (const auto &agg :
          query->columns->aggregates)
     {
+
         // COUNT(*) has no column
         if (agg.type == AggregateType::COUNT)
         {
             continue;
         }
 
-        if (!columnExists(
+        bool found =
+            columnExists(
                 tableName,
-                agg.column))
+                agg.column);
+
+        if (!found)
+        {
+            for (const auto &join :
+                 query->joins)
+            {
+                if (columnExists(
+                        join.rightTable,
+                        agg.column))
+                {
+                    found = true;
+                    break;
+                }
+            }
+        }
+
+        if (!found)
         {
             errorMessage =
                 "Unknown column: " +
@@ -321,11 +488,37 @@ bool SemanticAnalyzer::validate(QueryNode *query)
             return false;
         }
 
-        DataType type =
-            db->getColumnType(
-                tableName,
-                agg.column);
+        DataType type;
 
+        if (columnExists(
+                tableName,
+                agg.column))
+        {
+            type =
+                db->getColumnType(
+                    tableName,
+                    agg.column);
+        }
+        else
+        {
+            type = DataType::INT;
+
+            for (const auto &join :
+                 query->joins)
+            {
+                if (columnExists(
+                        join.rightTable,
+                        agg.column))
+                {
+                    type =
+                        db->getColumnType(
+                            join.rightTable,
+                            agg.column);
+
+                    break;
+                }
+            }
+        }
         if ((agg.type == AggregateType::SUM ||
              agg.type == AggregateType::AVG ||
              agg.type == AggregateType::MIN ||
@@ -504,6 +697,33 @@ bool SemanticAnalyzer::validateDelete(
         return validateExpression(
             node->whereExpression,
             node->tableName);
+    }
+
+    return true;
+}
+
+bool SemanticAnalyzer::validateCreateIndex(
+    CreateIndexNode *node)
+{
+    if (!tableExists(
+            node->tableName))
+    {
+        errorMessage =
+            "Unknown table: " +
+            node->tableName;
+
+        return false;
+    }
+
+    if (!columnExists(
+            node->tableName,
+            node->columnName))
+    {
+        errorMessage =
+            "Unknown column: " +
+            node->columnName;
+
+        return false;
     }
 
     return true;

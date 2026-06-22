@@ -6,18 +6,14 @@
 #include <string>
 
 #include "ast.h"
+#include "database.h"
 
 using namespace std;
 
 enum class StepType
 {
-    SCAN,
-    FILTER,
-    SORT,
-    LIMIT,
-    PROJECT,
-    AGGREGATE,
-    GROUP_BY
+    SCAN, INDEX_SEEK, FILTER, SORT,
+    LIMIT, PROJECT, AGGREGATE, GROUP_BY
 };
 
 struct ExecutionStep
@@ -29,11 +25,19 @@ struct ExecutionStep
 class Planner
 {
 private:
+    Database* db;
+
     vector<ExecutionStep> steps;
-    string expressionToString(ExpressionNode* node);
+
+    string expressionToString(
+        ExpressionNode* node);
 
 public:
-    void createPlan(QueryNode* query);
+    Planner(Database* database);
+
+    void createPlan(
+        QueryNode* query);
+
     void printPlan();
 };
 

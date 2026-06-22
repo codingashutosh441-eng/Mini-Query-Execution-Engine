@@ -228,6 +228,11 @@ bool Database::createIndex(
         tableName + "." +
         columnName;
 
+    if (indexes.count(key))
+    {
+       return false;
+    }
+
     Index index;
 
     index.tableName =
@@ -305,9 +310,35 @@ vector<Row> Database::lookupIndex(
     for (int rowPos :
          index.rowPositions[value])
     {
+        if (rowPos < 0 ||
+            static_cast<size_t>(rowPos) >= table->rows.size())
+        {
+            continue;
+        }
         result.push_back(
             table->rows[rowPos]);
     }
 
     return result;
+}
+
+void Database::rebuildIndexes()
+{
+    vector<pair<string, string>> indexInfo;
+
+    for (const auto &pair : indexes)
+    {
+        indexInfo.push_back(
+            {pair.second.tableName,
+             pair.second.columnName});
+    }
+
+    indexes.clear();
+
+    for (const auto &info : indexInfo)
+    {
+        createIndex(
+            info.first,
+            info.second);
+    }
 }

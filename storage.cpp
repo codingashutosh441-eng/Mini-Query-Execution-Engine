@@ -314,3 +314,66 @@ bool StorageManager::saveTable(
 
     return true;
 }
+
+bool StorageManager::saveIndex(
+    const string& tableName,
+    const string& columnName)
+{
+    ofstream file(
+        "database/indexes.meta",
+        ios::app);
+
+    if (!file.is_open())
+    {
+        return false;
+    }
+
+    file
+        << tableName
+        << ","
+        << columnName
+        << "\n";
+
+    return true;
+}
+
+void StorageManager::loadIndexes(
+    Database& db)
+{
+    ifstream file(
+        "database/indexes.meta");
+
+    if (!file.is_open())
+    {
+        return;
+    }
+
+    string line;
+
+    while (getline(file, line))
+    {
+        if (line.empty())
+        {
+            continue;
+        }
+
+        stringstream ss(line);
+
+        string tableName;
+        string columnName;
+
+        getline(
+            ss,
+            tableName,
+            ',');
+
+        getline(
+            ss,
+            columnName,
+            ',');
+
+        db.createIndex(
+            tableName,
+            columnName);
+    }
+}

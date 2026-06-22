@@ -79,6 +79,30 @@ void printTree(QueryNode *root)
                  << endl;
         }
     }
+    if (!root->joins.empty())
+    {
+        cout << "  Joins" << endl;
+
+        for (const auto &join : root->joins)
+        {
+            cout << "    ";
+
+            if (join.type == JoinType::INNER)
+            {
+                cout << "INNER";
+            }else if(join.type == JoinType::LEFT){
+                cout<<"LEFT";
+            }
+
+            cout << " JOIN "
+                 << join.rightTable
+                 << " ON "
+                 << join.leftColumn
+                 << " = "
+                 << join.rightColumn
+                 << endl;
+        }
+    }
 }
 
 void printExpressionTree(ExpressionNode *node, int level)
@@ -144,7 +168,6 @@ void freeQuery(QueryNode *query)
     delete query->orderBy;
 
     delete query->limit;
-
 
     freeExpressionTree(
         query->whereExpression);

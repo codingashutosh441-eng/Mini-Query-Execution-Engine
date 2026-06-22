@@ -91,6 +91,8 @@ public:
         const string &columnName,
         const string &value);
 
+    void rebuildIndexes();
+
     const TableSchema *getSchema(
         const string &tableName) const;
 

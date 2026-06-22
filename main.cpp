@@ -22,25 +22,17 @@ int main()
         "students",
         "age");
 
-   
-
     StorageManager::loadDatabase(
         db);
 
-     cout << db.createIndex(
-    "students",
-    "age")
-     << endl;
+    StorageManager::loadIndexes(
+        db);
 
-     vector<Row> rows =
-    db.lookupIndex(
-        "students",
-        "age",
-        "20");
-
-cout
-    << rows.size()
-    << endl;
+    vector<Row> rows =
+        db.lookupIndex(
+            "students",
+            "age",
+            "20");
 
     // Read multiline query until ';'
     while (true)
@@ -100,9 +92,23 @@ cout
 
         if (command == "CREATE")
         {
-            handleCreate(
-                parser,
-                db);
+            if (tokens.size() > 1 &&
+                tokens[1].value == "TABLE")
+            {
+                handleCreate(
+                    parser,
+                    db);
+            }
+
+            else if (tokens.size() > 1 &&
+                     tokens[1].value == "INDEX")
+            {
+                handleCreateIndex(
+                    parser,
+                    analyzer,
+                    db);
+            }
+
             continue;
         }
 

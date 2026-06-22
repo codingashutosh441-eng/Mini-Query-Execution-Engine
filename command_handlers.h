@@ -29,4 +29,9 @@ void handleDelete(
     SemanticAnalyzer& analyzer,
     Database& db);
 
+void handleCreateIndex(
+    Parser& parser,
+    SemanticAnalyzer& analyzer,
+    Database& db);
+
 #endif

@@ -96,7 +96,6 @@ bool Parser::parseColumns(
     return true;
 }
 
-
 bool Parser::parseTable(QueryNode *query)
 {
     if (pos >= tokens.size() ||
@@ -215,7 +214,7 @@ bool Parser::parseLimit(QueryNode *query)
 }
 
 bool Parser::parseAggregate(
-    ColumnNode* columns)
+    ColumnNode *columns)
 {
     AggregateNode agg;
 
@@ -299,7 +298,6 @@ bool Parser::parseAggregate(
     return true;
 }
 
-
 bool Parser::parseGroupBy(QueryNode *query)
 {
     if (pos >= tokens.size())
@@ -321,7 +319,7 @@ bool Parser::parseGroupBy(QueryNode *query)
 
     pos++;
 
-    GroupByNode* node =
+    GroupByNode *node =
         new GroupByNode();
 
     while (pos < tokens.size())
@@ -366,7 +364,7 @@ bool Parser::parseHaving(QueryNode *query)
 
     pos++;
 
-    HavingNode* node =
+    HavingNode *node =
         new HavingNode();
 
     // -------------------------
@@ -508,6 +506,101 @@ bool Parser::parseHaving(QueryNode *query)
     return true;
 }
 
+CreateIndexNode *Parser::parseCreateIndex()
+{
+    CreateIndexNode *node =
+        new CreateIndexNode();
+
+    if (!match("CREATE"))
+    {
+        errorMessage =
+            "Expected CREATE";
+
+        delete node;
+        return nullptr;
+    }
+
+    if (!match("INDEX"))
+    {
+        errorMessage =
+            "Expected INDEX";
+
+        delete node;
+        return nullptr;
+    }
+
+    if (tokens[pos].type != "identifier")
+    {
+        errorMessage =
+            "Expected index name";
+
+        delete node;
+        return nullptr;
+    }
+
+    node->indexName =
+        tokens[pos].value;
+
+    pos++;
+
+    if (!match("ON"))
+    {
+        errorMessage =
+            "Expected ON";
+
+        delete node;
+        return nullptr;
+    }
+
+    if (tokens[pos].type != "identifier")
+    {
+        errorMessage =
+            "Expected table name";
+
+        delete node;
+        return nullptr;
+    }
+
+    node->tableName =
+        tokens[pos].value;
+
+    pos++;
+
+    if (!match("("))
+    {
+        errorMessage =
+            "Expected (";
+
+        delete node;
+        return nullptr;
+    }
+
+    if (tokens[pos].type != "identifier")
+    {
+        errorMessage =
+            "Expected column name";
+
+        delete node;
+        return nullptr;
+    }
+
+    node->columnName =
+        tokens[pos].value;
+
+    pos++;
+
+    if (!match(")"))
+    {
+        errorMessage =
+            "Expected )";
+
+        delete node;
+        return nullptr;
+    }
+
+    return node;
+}
+
 QueryNode *Parser::parseSelect()
 {
     QueryNode *query = new QueryNode();
@@ -536,17 +629,22 @@ QueryNode *Parser::parseSelect()
         freeQuery(query);
         return nullptr;
     }
+    if (!parseJoins(query))
+    {
+        freeQuery(query);
+        return nullptr;
+    }
 
     if (!parseWhere(query))
     {
         freeQuery(query);
         return nullptr;
     }
-    
+
     if (!parseGroupBy(query))
     {
-       freeQuery(query);
-       return nullptr;
+        freeQuery(query);
+        return nullptr;
     }
 
     if (!parseHaving(query))
@@ -1208,4 +1306,104 @@ DeleteNode *Parser::parseDelete()
     }
 
     return node;
+}
+
+bool Parser::parseJoins(QueryNode *query)
+{
+    while (pos < tokens.size() &&
+               (tokens[pos].value == "INNER" ||
+           tokens[pos].value == "LEFT"))
+    {
+        JoinNode join;
+
+        if (tokens[pos].value == "INNER")
+        {
+            join.type = JoinType::INNER;
+        }
+        else if(tokens[pos].value == "LEFT")
+        {
+            join.type = JoinType::LEFT;
+        }
+
+        pos++;
+
+        if (pos >= tokens.size() ||
+            tokens[pos].value != "JOIN")
+        {
+            errorMessage =
+                "Expected JOIN";
+
+            return false;
+        }
+
+        pos++;
+
+        if (pos >= tokens.size() ||
+            tokens[pos].type != "identifier")
+        {
+            errorMessage =
+                "Expected table name";
+
+            return false;
+        }
+
+        join.rightTable =
+            tokens[pos].value;
+
+        pos++;
+
+        if (pos >= tokens.size() ||
+            tokens[pos].value != "ON")
+        {
+            errorMessage =
+                "Expected ON";
+
+            return false;
+        }
+
+        pos++;
+
+        if (pos >= tokens.size() ||
+            tokens[pos].type != "identifier")
+        {
+            errorMessage =
+                "Expected left column";
+
+            return false;
+        }
+
+        join.leftColumn =
+            tokens[pos].value;
+
+        pos++;
+
+        if (pos >= tokens.size() ||
+            tokens[pos].value != "=")
+        {
+            errorMessage =
+                "Expected =";
+
+            return false;
+        }
+
+        pos++;
+
+        if (pos >= tokens.size() ||
+            tokens[pos].type != "identifier")
+        {
+            errorMessage =
+                "Expected right column";
+
+            return false;
+        }
+
+        join.rightColumn =
+            tokens[pos].value;
+
+        pos++;
+
+        query->joins.push_back(join);
+    }
+
+    return true;
 }
