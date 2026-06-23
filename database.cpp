@@ -18,6 +18,11 @@ Database::Database()
 {
 }
 
+string Database::getLastError() const
+{
+    return lastError;
+}
+
 void Database::createTable(const string &tableName)
 {
     if (tables.find(tableName) == tables.end())
@@ -26,11 +31,59 @@ void Database::createTable(const string &tableName)
     }
 }
 
-void Database::insertRow(const string &tableName, const Row &row)
+bool Database::insertRow(const string &tableName, const Row &row)
 {
+    const TableSchema *schema =
+        getSchema(tableName);
+
+    if (!schema)
+    {
+        return false;
+    }
     if (tables.find(tableName) == tables.end())
     {
         createTable(tableName);
+    }
+
+    for (size_t col = 0;
+         col < schema->columns.size();
+         col++)
+    {
+        const ColumnInfo &column =
+            schema->columns[col];
+
+        if (!column.primaryKey &&
+            !column.unique)
+        {
+            continue;
+        }
+
+        string newValue =
+            row.values[col].value;
+
+        for (const Row &existing :
+             tables[tableName].rows)
+        {
+
+            if (existing.values[col].value ==
+                newValue)
+            {
+                if (column.primaryKey)
+                {
+                    lastError =
+                        "Duplicate value for PRIMARY KEY column: " +
+                        column.name;
+                }
+                else
+                {
+                    lastError =
+                        "Duplicate value for UNIQUE column: " +
+                        column.name;
+                }
+
+                return false;
+            }
+        }
     }
 
     tables[tableName].insert(row);
@@ -60,6 +113,8 @@ void Database::insertRow(const string &tableName, const Row &row)
         index.rowPositions[value]
             .push_back(rowPosition);
     }
+
+    return true;
 }
 
 Table *Database::getTable(const string &tableName)
@@ -230,7 +285,7 @@ bool Database::createIndex(
 
     if (indexes.count(key))
     {
-       return false;
+        return false;
     }
 
     Index index;

@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <algorithm>
 #include <sstream>
+#include <unordered_set>
 
 using namespace std;
 
@@ -416,6 +417,69 @@ void Executor::execute(QueryNode *query)
     // OUTPUT
     // -------------------------
 
+    // -------------------------
+    // DISTINCT PHASE
+    // -------------------------
+
+    if (query->columns->distinct)
+    {
+        unordered_set<string> seen;
+
+        vector<Row> distinctRows;
+
+        for (const auto &row : resultRows)
+        {
+            string key;
+
+            if (query->columns->selectAll)
+            {
+                for (const auto &cell :
+                     row.values)
+                {
+                    key += cell.value + "|";
+                }
+            }
+            else
+            {
+                for (const auto &col :
+                     query->columns->columns)
+                {
+                    int idx;
+
+                    if (!query->joins.empty())
+                    {
+                        idx =
+                            findJoinedColumnIndex(
+                                query,
+                                col);
+                    }
+                    else
+                    {
+                        idx =
+                            db->getColumnIndex(
+                                query->table->tableName,
+                                col);
+                    }
+
+                    if (idx >= 0)
+                    {
+                        key +=
+                            row.values[idx].value + "|";
+                    }
+                }
+            }
+
+            if (!seen.count(key))
+            {
+                seen.insert(key);
+
+                distinctRows.push_back(row);
+            }
+        }
+
+        resultRows = distinctRows;
+    }
+
     cout << "\nRESULT\n\n";
 
     if (query->columns->selectAll)
@@ -527,6 +591,7 @@ void Executor::execute(QueryNode *query)
 void Executor::executeInsert(
     InsertNode *node)
 {
+    int insertedRows = 0;
     for (const auto &insertRow :
          node->rows)
     {
@@ -556,17 +621,26 @@ void Executor::executeInsert(
             row.values.push_back(cell);
         }
 
-        db->insertRow(
-            node->tableName,
-            row);
+        if (!db->insertRow(
+                node->tableName,
+                row))
+        {
+            cout
+                << db->getLastError()
+                << endl;
+
+            continue;
+        }
 
         StorageManager::appendRow(
             node->tableName,
             row);
+
+        insertedRows++;
     }
 
     cout
-        << node->rows.size()
+        << insertedRows
         << " row(s) inserted"
         << endl;
 }

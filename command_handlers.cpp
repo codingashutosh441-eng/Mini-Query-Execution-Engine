@@ -29,9 +29,19 @@ void handleCreate(
 
     for (const auto &col : createNode->columns)
     {
-        columns.push_back(
-            {col.name,
-             col.type});
+        ColumnInfo info;
+
+        info.name = col.name;
+        info.type = col.type;
+        info.primaryKey = col.isPrimaryKey;
+        info.unique = col.isUnique;
+        cout
+            << info.name
+            << " PK=" << info.primaryKey
+            << " UNIQUE=" << info.unique
+            << endl;
+
+        columns.push_back(info);
     }
 
     bool success =
@@ -39,7 +49,7 @@ void handleCreate(
             createNode->tableName,
             columns);
 
-        if (!success)
+    if (!success)
     {
         cout << "ERROR: Table '"
              << createNode->tableName
@@ -49,6 +59,21 @@ void handleCreate(
         delete createNode;
 
         return;
+    }
+    for (const auto &col :
+         columns)
+    {
+        if (col.primaryKey ||
+            col.unique)
+        {
+            db.createIndex(
+                createNode->tableName,
+                col.name);
+
+            StorageManager::saveIndex(
+                createNode->tableName,
+                col.name);
+        }
     }
 
     const TableSchema *schema =
@@ -198,6 +223,14 @@ void handleSelect(
     Planner planner(&db);
 
     planner.createPlan(query);
+    if (query->explainMode)
+    {
+        planner.printPlan();
+
+        freeQuery(query);
+
+        return;
+    }
 
     if (DEBUG_MODE)
     {
@@ -254,11 +287,11 @@ void handleDelete(
 }
 
 void handleCreateIndex(
-    Parser& parser,
-    SemanticAnalyzer& analyzer,
-    Database& db)
+    Parser &parser,
+    SemanticAnalyzer &analyzer,
+    Database &db)
 {
-    CreateIndexNode* node =
+    CreateIndexNode *node =
         parser.parseCreateIndex();
 
     if (!node)
@@ -288,8 +321,8 @@ void handleCreateIndex(
     if (success)
     {
         StorageManager::saveIndex(
-        node->tableName,
-        node->columnName);
+            node->tableName,
+            node->columnName);
         cout
             << "Index created successfully"
             << endl;

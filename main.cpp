@@ -134,7 +134,7 @@ int main()
         }
 
         // SELECT
-        if (command == "SELECT")
+        if (command == "SELECT"||command == "EXPLAIN")
         {
             handleSelect(
                 parser,

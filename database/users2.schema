@@ -1,0 +1,3 @@
+id,INT,PK
+email,STRING,UNIQUE
+name,STRING,NONE

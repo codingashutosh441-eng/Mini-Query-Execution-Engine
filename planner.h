@@ -13,7 +13,7 @@ using namespace std;
 enum class StepType
 {
     SCAN, INDEX_SEEK, FILTER, SORT,
-    LIMIT, PROJECT, AGGREGATE, GROUP_BY
+    LIMIT, PROJECT, AGGREGATE, GROUP_BY, DISTINCT
 };
 
 struct ExecutionStep

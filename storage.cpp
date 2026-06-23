@@ -10,23 +10,23 @@ namespace fs = std::filesystem;
 string StorageManager::dataTypeToString(
     DataType type)
 {
-    switch(type)
+    switch (type)
     {
-        case DataType::INT:
-            return "INT";
+    case DataType::INT:
+        return "INT";
 
-        case DataType::STRING:
-            return "STRING";
+    case DataType::STRING:
+        return "STRING";
 
-        case DataType::FLOAT:
-            return "FLOAT";
+    case DataType::FLOAT:
+        return "FLOAT";
     }
 
     return "STRING";
 }
 
 bool StorageManager::createTableFiles(
-    const TableSchema& schema)
+    const TableSchema &schema)
 {
     fs::create_directories(
         "database");
@@ -49,14 +49,27 @@ bool StorageManager::createTableFiles(
         return false;
     }
 
-    for (const auto& column :
+    for (const auto &column :
          schema.columns)
     {
+        string constraint = "NONE";
+
+        if (column.primaryKey)
+        {
+            constraint = "PK";
+        }
+        else if (column.unique)
+        {
+            constraint = "UNIQUE";
+        }
+
         schemaFile
             << column.name
             << ","
             << dataTypeToString(
                    column.type)
+            << ","
+            << constraint
             << "\n";
     }
 
@@ -76,8 +89,8 @@ bool StorageManager::createTableFiles(
 }
 
 bool StorageManager::appendRow(
-    const string& tableName,
-    const Row& row)
+    const string &tableName,
+    const Row &row)
 {
     string csvPath =
         "database/" +
@@ -112,9 +125,8 @@ bool StorageManager::appendRow(
     return true;
 }
 
-
 DataType StorageManager::stringToDataType(
-    const string& type)
+    const string &type)
 {
     if (type == "INT")
         return DataType::INT;
@@ -126,7 +138,7 @@ DataType StorageManager::stringToDataType(
 }
 
 void StorageManager::loadDatabase(
-    Database& db)
+    Database &db)
 {
     namespace fs = std::filesystem;
 
@@ -135,7 +147,7 @@ void StorageManager::loadDatabase(
         return;
     }
 
-    for (const auto& entry :
+    for (const auto &entry :
          fs::directory_iterator("database"))
     {
         if (entry.path().extension() != ".schema")
@@ -174,6 +186,7 @@ void StorageManager::loadDatabase(
 
             string columnName;
             string typeName;
+            string constraint;
 
             getline(
                 ss,
@@ -185,6 +198,11 @@ void StorageManager::loadDatabase(
                 typeName,
                 ',');
 
+            getline(
+                ss,
+                constraint,
+                ',');
+
             ColumnInfo column;
 
             column.name =
@@ -193,6 +211,12 @@ void StorageManager::loadDatabase(
             column.type =
                 stringToDataType(
                     typeName);
+
+            column.primaryKey =
+                (constraint == "PK");
+
+            column.unique =
+                (constraint == "UNIQUE");
 
             schema.columns.push_back(
                 column);
@@ -248,8 +272,7 @@ void StorageManager::loadDatabase(
                     schema.columns.size())
                 {
                     cell.type =
-                        schema.columns[
-                            columnIndex]
+                        schema.columns[columnIndex]
                             .type;
                 }
                 else
@@ -276,7 +299,7 @@ void StorageManager::loadDatabase(
 }
 
 bool StorageManager::saveTable(
-    const Table& table)
+    const Table &table)
 {
     string csvPath =
         "database/" +
@@ -292,7 +315,7 @@ bool StorageManager::saveTable(
         return false;
     }
 
-    for (const auto& row :
+    for (const auto &row :
          table.rows)
     {
         for (size_t i = 0;
@@ -316,8 +339,8 @@ bool StorageManager::saveTable(
 }
 
 bool StorageManager::saveIndex(
-    const string& tableName,
-    const string& columnName)
+    const string &tableName,
+    const string &columnName)
 {
     ofstream file(
         "database/indexes.meta",
@@ -338,7 +361,7 @@ bool StorageManager::saveIndex(
 }
 
 void StorageManager::loadIndexes(
-    Database& db)
+    Database &db)
 {
     ifstream file(
         "database/indexes.meta");

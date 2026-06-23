@@ -31,6 +31,15 @@ bool Parser::parseColumns(
     ColumnNode *columns =
         new ColumnNode();
 
+    if (pos < tokens.size() &&
+        tokens[pos].value == "DISTINCT")
+    {
+        columns->distinct = true;
+
+        pos++;
+        cout << "DISTINCT DETECTED" << endl;
+    }
+
     if (pos >= tokens.size())
     {
         errorMessage =
@@ -605,9 +614,15 @@ QueryNode *Parser::parseSelect()
 {
     QueryNode *query = new QueryNode();
 
+    if (match("EXPLAIN"))
+    {
+        query->explainMode = true;
+    }
+
     if (!match("SELECT"))
     {
         errorMessage = "Expected SELECT";
+        delete query;
         return nullptr;
     }
 
@@ -991,6 +1006,38 @@ CreateTableNode *Parser::parseCreateTable()
 
         pos++;
 
+        while (pos < tokens.size())
+        {
+            if (tokens[pos].value == "PRIMARY")
+            {
+                pos++;
+
+                if (pos >= tokens.size() ||
+                    tokens[pos].value != "KEY")
+                {
+                    errorMessage =
+                        "Expected KEY after PRIMARY";
+
+                    delete node;
+                    return nullptr;
+                }
+
+                column.isPrimaryKey = true;
+
+                pos++;
+            }
+            else if (tokens[pos].value == "UNIQUE")
+            {
+                column.isUnique = true;
+
+                pos++;
+            }
+            else
+            {
+                break;
+            }
+        }
+
         node->columns.push_back(column);
 
         if (pos >= tokens.size())
@@ -1311,9 +1358,9 @@ DeleteNode *Parser::parseDelete()
 bool Parser::parseJoins(QueryNode *query)
 {
     while (pos < tokens.size() &&
-               (tokens[pos].value == "INNER" ||
-           tokens[pos].value == "LEFT"||
-           tokens[pos].value == "RIGHT"))
+           (tokens[pos].value == "INNER" ||
+            tokens[pos].value == "LEFT" ||
+            tokens[pos].value == "RIGHT"))
     {
         JoinNode join;
 
@@ -1321,10 +1368,11 @@ bool Parser::parseJoins(QueryNode *query)
         {
             join.type = JoinType::INNER;
         }
-        else if(tokens[pos].value == "LEFT")
+        else if (tokens[pos].value == "LEFT")
         {
             join.type = JoinType::LEFT;
-        }else if(tokens[pos].value == "RIGHT")
+        }
+        else if (tokens[pos].value == "RIGHT")
         {
             join.type = JoinType::RIGHT;
         }

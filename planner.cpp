@@ -81,6 +81,16 @@ void Planner::createPlan(QueryNode *query)
         steps.push_back(step);
     }
 
+    if (query->columns != nullptr &&
+        query->columns->distinct)
+    {
+        ExecutionStep step;
+
+        step.type = StepType::DISTINCT;
+
+        steps.push_back(step);
+    }
+
     if (query->whereExpression != nullptr)
     {
         ExecutionStep step;
@@ -222,6 +232,10 @@ void Planner::printPlan()
         {
             cout << "SCAN TABLE "
                  << step.details;
+        }
+        else if (step.type == StepType::DISTINCT)
+        {
+            cout << "DISTINCT";
         }
 
         else if (step.type == StepType::FILTER)

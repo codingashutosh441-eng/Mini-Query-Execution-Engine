@@ -14,6 +14,9 @@ struct ColumnInfo
 {
     string name;
     DataType type;
+
+    bool primaryKey = false;
+    bool unique = false;
 };
 
 struct TableSchema
@@ -62,12 +65,13 @@ private:
     unordered_map<string, Table> tables;
     unordered_map<string, TableSchema> schemas;
     unordered_map<string, Index> indexes;
+    string lastError;
 
 public:
     Database();
 
     void createTable(const string &tableName);
-    void insertRow(const string &tableName, const Row &row);
+    bool insertRow(const string &tableName, const Row &row);
     Table *getTable(const string &tableName);
 
     bool tableExists(const string &tableName);
@@ -110,6 +114,8 @@ public:
 
     void addLoadedTable(
         const Table &table);
+
+    string getLastError() const;
 };
 
 #endif

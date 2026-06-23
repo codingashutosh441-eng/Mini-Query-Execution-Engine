@@ -26,7 +26,8 @@ enum class AggregateType
 enum class JoinType
 {
     INNER,
-    LEFT, RIGHT
+    LEFT,
+    RIGHT
 };
 
 struct JoinNode
@@ -76,6 +77,9 @@ struct ColumnDefinitionNode
 {
     string name;
     DataType type;
+
+    bool isPrimaryKey = false;
+    bool isUnique = false;
 };
 
 struct CreateTableNode
@@ -91,6 +95,7 @@ struct ColumnNode
     vector<AggregateNode> aggregates;
 
     bool selectAll = false;
+    bool distinct = false;
 };
 
 struct TableNode
@@ -120,23 +125,24 @@ struct ExpressionNode
 
     DataType valueType;
 
-    ExpressionNode* left = nullptr;
-    ExpressionNode* right = nullptr;
+    ExpressionNode *left = nullptr;
+    ExpressionNode *right = nullptr;
 };
 
 struct QueryNode
 {
-    ColumnNode* columns = nullptr;
-    TableNode* table = nullptr;
+    ColumnNode *columns = nullptr;
+    TableNode *table = nullptr;
     vector<JoinNode> joins;
-    ExpressionNode* whereExpression = nullptr;
+    ExpressionNode *whereExpression = nullptr;
 
-    OrderByNode* orderBy = nullptr;
-    LimitNode* limit = nullptr;
+    OrderByNode *orderBy = nullptr;
+    LimitNode *limit = nullptr;
 
-    GroupByNode* groupBy = nullptr;
-    HavingNode* having = nullptr;
-    
+    GroupByNode *groupBy = nullptr;
+    HavingNode *having = nullptr;
+
+    bool explainMode = false;
 };
 
 struct InsertValueNode
@@ -164,21 +170,21 @@ struct UpdateNode
     string newValue;
     DataType valueType;
 
-    ExpressionNode* whereExpression = nullptr;
+    ExpressionNode *whereExpression = nullptr;
 };
 
 struct DeleteNode
 {
     string tableName;
 
-    ExpressionNode* whereExpression = nullptr;
+    ExpressionNode *whereExpression = nullptr;
 };
 
-void printTree(QueryNode* root);
-void freeQuery(QueryNode* root);
+void printTree(QueryNode *root);
+void freeQuery(QueryNode *root);
 
 void printExpressionTree(ExpressionNode *node, int level);
 void freeExpressionTree(ExpressionNode *node);
-void freeDelete(DeleteNode* node);
+void freeDelete(DeleteNode *node);
 
 #endif
