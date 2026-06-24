@@ -20,7 +20,7 @@ int main()
 
     db.createIndex(
         "students",
-        "age");
+        {"age"});
 
     StorageManager::loadDatabase(
         db);
@@ -31,8 +31,8 @@ int main()
     vector<Row> rows =
         db.lookupIndex(
             "students",
-            "age",
-            "20");
+            {"age"},
+            {"20"});
 
     // Read multiline query until ';'
     while (true)

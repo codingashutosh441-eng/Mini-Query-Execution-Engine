@@ -19,7 +19,7 @@ public:
 
     static bool saveIndex(
         const string &tableName,
-        const string &columnName);
+        const vector<string> &columnNames);
 
     static void loadIndexes(
         Database &db);

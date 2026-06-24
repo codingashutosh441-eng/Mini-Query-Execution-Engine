@@ -45,15 +45,64 @@ void Planner::createPlan(QueryNode *query)
     {
         bool useIndex = false;
 
-        if (query->whereExpression != nullptr &&
-            !query->whereExpression->isLogical &&
-            query->whereExpression->op == "=")
+        string indexDetails;
+
+        if (query->whereExpression != nullptr)
         {
-            if (db->hasIndex(
-                    query->table->tableName,
-                    query->whereExpression->column))
+            ExpressionNode *expr =
+                query->whereExpression;
+
+            // Single-column index
+            if (!expr->isLogical &&
+                expr->op == "=")
             {
-                useIndex = true;
+                if (db->hasIndex(
+                        query->table->tableName,
+                        {expr->column}))
+                {
+                    useIndex = true;
+
+                    indexDetails =
+                        query->table->tableName +
+                        "." +
+                        expr->column;
+                }
+            }
+
+            // Composite index
+            else if (
+                expr->isLogical &&
+                expr->logicalOp == "AND")
+            {
+            
+
+                if (!expr->left->isLogical &&
+                    !expr->right->isLogical &&
+                    expr->left->op == "=" &&
+                    expr->right->op == "=")
+                {
+                    vector<string> columns =
+                        {
+                            expr->left->column,
+                            expr->right->column};
+
+                    if (db->hasIndex(
+                            query->table->tableName,
+                            columns))
+                    {
+                        useIndex = true;
+
+                        indexDetails =
+                            query->table->tableName;
+
+                        for (const auto &col :
+                             columns)
+                        {
+                            indexDetails +=
+                                "." + col;
+                        }
+                    }
+                }
             }
         }
 
@@ -64,10 +113,7 @@ void Planner::createPlan(QueryNode *query)
             step.type =
                 StepType::INDEX_SEEK;
 
-            step.details =
-                query->table->tableName +
-                "." +
-                query->whereExpression->column;
+            step.details = indexDetails;
         }
         else
         {

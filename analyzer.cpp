@@ -715,16 +715,20 @@ bool SemanticAnalyzer::validateCreateIndex(
         return false;
     }
 
-    if (!columnExists(
+    for (const string &column :
+     node->columnNames)
+{
+    if (!db->columnExists(
             node->tableName,
-            node->columnName))
+            column))
     {
         errorMessage =
             "Unknown column: " +
-            node->columnName;
+            column;
 
         return false;
     }
+}
 
     return true;
 }

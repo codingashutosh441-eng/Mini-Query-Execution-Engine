@@ -233,8 +233,98 @@ void Executor::execute(QueryNode *query)
     vector<Row> resultRows;
 
     bool usedIndex = false;
+    if (!usedIndex &&
+    query->whereExpression != nullptr &&
+    query->whereExpression->isLogical &&
+    query->whereExpression->logicalOp == "AND")
+{
+    ExpressionNode *expr =
+        query->whereExpression;
 
-    if (query->whereExpression != nullptr &&
+    if (!expr->left->isLogical &&
+        !expr->right->isLogical &&
+        expr->left->op == "=" &&
+        expr->right->op == "=")
+    {
+        vector<string> columns =
+        {
+            expr->left->column,
+            expr->right->column
+        };
+
+        string leftValue =
+            expr->left->value;
+
+        string rightValue =
+            expr->right->value;
+
+        if (expr->left->valueType ==
+            DataType::STRING)
+        {
+            if (leftValue.size() >= 2 &&
+                leftValue.front() == '\'' &&
+                leftValue.back() == '\'')
+            {
+                leftValue =
+                    leftValue.substr(
+                        1,
+                        leftValue.size() - 2);
+            }
+        }
+
+        if (expr->right->valueType ==
+            DataType::STRING)
+        {
+            if (rightValue.size() >= 2 &&
+                rightValue.front() == '\'' &&
+                rightValue.back() == '\'')
+            {
+                rightValue =
+                    rightValue.substr(
+                        1,
+                        rightValue.size() - 2);
+            }
+        }
+
+        vector<string> values =
+        {
+            leftValue,
+            rightValue
+        };
+
+        if (db->hasIndex(
+                query->table->tableName,
+                columns))
+        {
+            vector<Row> candidateRows =
+                db->lookupIndex(
+                    query->table->tableName,
+                    columns,
+                    values);
+
+            for (const auto &row :
+                 candidateRows)
+            {
+                if (evaluateExpression(
+                        row,
+                        query->table->tableName,
+                        query->whereExpression))
+                {
+                    resultRows.push_back(row);
+                }
+            }
+
+            usedIndex = true;
+
+            cout
+                << "[COMPOSITE INDEX USED]"
+                << endl;
+        }
+    }
+}
+
+    if (!usedIndex &&
+        query->whereExpression != nullptr &&
         !query->whereExpression->isLogical &&
         query->whereExpression->op == "=")
     {
@@ -260,13 +350,13 @@ void Executor::execute(QueryNode *query)
 
         if (db->hasIndex(
                 query->table->tableName,
-                column))
+                {column}))
         {
             vector<Row> candidateRows =
                 db->lookupIndex(
                     query->table->tableName,
-                    column,
-                    value);
+                    {column},
+                    {value});
 
             for (const auto &row : candidateRows)
             {

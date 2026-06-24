@@ -68,11 +68,11 @@ void handleCreate(
         {
             db.createIndex(
                 createNode->tableName,
-                col.name);
+               { col.name});
 
             StorageManager::saveIndex(
                 createNode->tableName,
-                col.name);
+                {col.name});
         }
     }
 
@@ -314,15 +314,15 @@ void handleCreateIndex(
     }
 
     bool success =
-        db.createIndex(
-            node->tableName,
-            node->columnName);
+    db.createIndex(
+        node->tableName,
+        node->columnNames);
 
     if (success)
     {
         StorageManager::saveIndex(
             node->tableName,
-            node->columnName);
+            node->columnNames);
         cout
             << "Index created successfully"
             << endl;

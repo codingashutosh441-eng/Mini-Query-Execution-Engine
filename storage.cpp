@@ -340,7 +340,7 @@ bool StorageManager::saveTable(
 
 bool StorageManager::saveIndex(
     const string &tableName,
-    const string &columnName)
+    const vector<string> &columnNames)
 {
     ofstream file(
         "database/indexes.meta",
@@ -351,11 +351,15 @@ bool StorageManager::saveIndex(
         return false;
     }
 
-    file
-        << tableName
-        << ","
-        << columnName
-        << "\n";
+    file << tableName;
+
+    for (const string &column :
+         columnNames)
+    {
+        file << "," << column;
+    }
+
+    file << "\n";
 
     return true;
 }
@@ -374,29 +378,36 @@ void StorageManager::loadIndexes(
     string line;
 
     while (getline(file, line))
+{
+    if (line.empty())
     {
-        if (line.empty())
-        {
-            continue;
-        }
-
-        stringstream ss(line);
-
-        string tableName;
-        string columnName;
-
-        getline(
-            ss,
-            tableName,
-            ',');
-
-        getline(
-            ss,
-            columnName,
-            ',');
-
-        db.createIndex(
-            tableName,
-            columnName);
+        continue;
     }
+
+    stringstream ss(line);
+
+    string tableName;
+
+    getline(
+        ss,
+        tableName,
+        ',');
+
+    vector<string> columns;
+
+    string column;
+
+    while (getline(
+        ss,
+        column,
+        ','))
+    {
+        columns.push_back(
+            column);
+    }
+
+    db.createIndex(
+        tableName,
+        columns);
+}
 }

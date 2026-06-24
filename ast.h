@@ -70,7 +70,7 @@ struct CreateIndexNode
 
     string tableName;
 
-    string columnName;
+    vector<string> columnNames;
 };
 
 struct ColumnDefinitionNode

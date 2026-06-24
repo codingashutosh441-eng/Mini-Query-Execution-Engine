@@ -51,7 +51,7 @@ public:
 struct Index
 {
     string tableName;
-    string columnName;
+    vector<string> columnNames;
 
     unordered_map<
         string,
@@ -84,16 +84,19 @@ public:
 
     bool createIndex(
         const string &tableName,
-        const string &columnName);
+         const vector<string> &columnNames);
 
     bool hasIndex(
         const string &tableName,
-        const string &columnName);
+         const vector<string> &columnNames);
 
     vector<Row> lookupIndex(
         const string &tableName,
-        const string &columnName,
-        const string &value);
+        const vector<string> &columnNames,
+        const vector<string> &values);
+    
+    string buildCompositeKey(
+    const vector<string> &values);
 
     void rebuildIndexes();
 

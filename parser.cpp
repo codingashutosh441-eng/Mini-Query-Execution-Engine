@@ -584,7 +584,10 @@ CreateIndexNode *Parser::parseCreateIndex()
         return nullptr;
     }
 
-    if (tokens[pos].type != "identifier")
+    while (true)
+{
+    if (pos >= tokens.size() ||
+        tokens[pos].type != "identifier")
     {
         errorMessage =
             "Expected column name";
@@ -593,19 +596,29 @@ CreateIndexNode *Parser::parseCreateIndex()
         return nullptr;
     }
 
-    node->columnName =
-        tokens[pos].value;
+    node->columnNames.push_back(
+        tokens[pos].value);
 
     pos++;
 
-    if (!match(")"))
+    if (pos < tokens.size() &&
+        tokens[pos].value == ",")
     {
-        errorMessage =
-            "Expected )";
-
-        delete node;
-        return nullptr;
+        pos++;
+        continue;
     }
+
+    break;
+}
+
+if (!match(")"))
+{
+    errorMessage =
+        "Expected )";
+
+    delete node;
+    return nullptr;
+}
 
     return node;
 }

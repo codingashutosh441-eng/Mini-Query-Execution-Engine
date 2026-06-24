@@ -96,13 +96,24 @@ bool Database::insertRow(const string &tableName, const Row &row)
             continue;
         }
 
-        int columnIndex =
-            getColumnIndex(
-                tableName,
-                index.columnName);
+        vector<string> values;
 
-        string value =
-            row.values[columnIndex].value;
+        for (const string &column :
+             index.columnNames)
+        {
+            int columnIndex =
+                getColumnIndex(
+                    tableName,
+                    column);
+
+            values.push_back(
+                row.values[columnIndex]
+                    .value);
+        }
+
+        string compositeKey =
+            buildCompositeKey(
+                values);
 
         int rowPosition =
             static_cast<int>(
@@ -110,8 +121,9 @@ bool Database::insertRow(const string &tableName, const Row &row)
                     .rows.size() -
                 1);
 
-        index.rowPositions[value]
-            .push_back(rowPosition);
+        index.rowPositions[compositeKey]
+            .push_back(
+                rowPosition);
     }
 
     return true;
@@ -263,25 +275,53 @@ void Database::addLoadedTable(
         table;
 }
 
+string Database::buildCompositeKey(
+    const vector<string> &values)
+{
+    string key;
+
+    for (size_t i = 0;
+         i < values.size();
+         i++)
+    {
+        key += values[i];
+
+        if (i + 1 < values.size())
+        {
+            key += "|";
+        }
+    }
+
+    return key;
+}
+
 bool Database::createIndex(
     const string &tableName,
-    const string &columnName)
+    const vector<string> &columnNames)
 {
     if (!tableExists(tableName))
     {
         return false;
     }
 
-    if (!columnExists(
-            tableName,
-            columnName))
+    for (const string &column :
+         columnNames)
     {
-        return false;
+        if (!columnExists(
+                tableName,
+                column))
+        {
+            return false;
+        }
     }
 
-    string key =
-        tableName + "." +
-        columnName;
+    string key = tableName;
+
+    for (const string &column :
+         columnNames)
+    {
+        key += "." + column;
+    }
 
     if (indexes.count(key))
     {
@@ -290,30 +330,36 @@ bool Database::createIndex(
 
     Index index;
 
-    index.tableName =
-        tableName;
-
-    index.columnName =
-        columnName;
+    index.tableName = tableName;
+    index.columnNames = columnNames;
 
     Table *table =
         getTable(tableName);
-
-    int columnIndex =
-        getColumnIndex(
-            tableName,
-            columnName);
 
     for (size_t rowPos = 0;
          rowPos < table->rows.size();
          rowPos++)
     {
-        string value =
-            table->rows[rowPos]
-                .values[columnIndex]
-                .value;
+        vector<string> values;
 
-        index.rowPositions[value]
+        for (const string &column :
+             columnNames)
+        {
+            int columnIndex =
+                getColumnIndex(
+                    tableName,
+                    column);
+
+            values.push_back(
+                table->rows[rowPos]
+                    .values[columnIndex]
+                    .value);
+        }
+
+        string compositeKey =
+            buildCompositeKey(values);
+
+        index.rowPositions[compositeKey]
             .push_back(
                 static_cast<int>(
                     rowPos));
@@ -326,30 +372,41 @@ bool Database::createIndex(
 
 bool Database::hasIndex(
     const string &tableName,
-    const string &columnName)
+    const vector<string> &columnNames)
 {
-    string key =
-        tableName + "." +
-        columnName;
+    string key = tableName;
+
+    for (const string &column :
+         columnNames)
+    {
+        key += "." + column;
+    }
 
     return indexes.count(key);
 }
 
 vector<Row> Database::lookupIndex(
     const string &tableName,
-    const string &columnName,
-    const string &value)
+    const vector<string> &columnNames,
+    const vector<string> &values)
 {
     vector<Row> result;
 
-    string key =
-        tableName + "." +
-        columnName;
+    string key = tableName;
+
+    for (const string &column :
+         columnNames)
+    {
+        key += "." + column;
+    }
 
     if (!indexes.count(key))
     {
         return result;
     }
+
+    string compositeKey =
+        buildCompositeKey(values);
 
     Table *table =
         getTable(tableName);
@@ -357,19 +414,21 @@ vector<Row> Database::lookupIndex(
     auto &index =
         indexes[key];
 
-    if (!index.rowPositions.count(value))
+    if (!index.rowPositions.count(
+            compositeKey))
     {
         return result;
     }
 
     for (int rowPos :
-         index.rowPositions[value])
+         index.rowPositions[compositeKey])
     {
         if (rowPos < 0 ||
             static_cast<size_t>(rowPos) >= table->rows.size())
         {
             continue;
         }
+
         result.push_back(
             table->rows[rowPos]);
     }
@@ -379,18 +438,24 @@ vector<Row> Database::lookupIndex(
 
 void Database::rebuildIndexes()
 {
-    vector<pair<string, string>> indexInfo;
+    vector<
+        pair<
+            string,
+            vector<string>>>
+        indexInfo;
 
-    for (const auto &pair : indexes)
+    for (const auto &pair :
+         indexes)
     {
         indexInfo.push_back(
             {pair.second.tableName,
-             pair.second.columnName});
+             pair.second.columnNames});
     }
 
     indexes.clear();
 
-    for (const auto &info : indexInfo)
+    for (const auto &info :
+         indexInfo)
     {
         createIndex(
             info.first,
