@@ -12,7 +12,7 @@ set<string> mysqlKeywords =
         "ORDER", "GROUP", "BY", "ASC", "DESC",
         "LIMIT", "INTO", "VALUES", "SET", "AND", "OR",
         "COUNT", "SUM", "AVG", "MIN", "MAX", "HAVING",
-        "INNER", "JOIN", "ON", "LEFT", "RIGHT"};
+        "INNER", "JOIN", "ON", "LEFT", "RIGHT", "EXPLAIN"};
 
 set<string> ops =
     {

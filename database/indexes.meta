@@ -1,6 +1,9 @@
-students,age
-users3,id
-users3,email
-users4,id
-users4,email
-students,age,name
+students,id
+composite_test,age,name
+test_frontend,id
+ui_test,id
+ui_test,name
+final_test,id
+final_test,name
+crud_test,id
+crud_test,name

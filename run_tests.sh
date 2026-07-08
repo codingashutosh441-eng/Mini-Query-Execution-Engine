@@ -2,7 +2,7 @@
 
 echo "Compiling..."
 
-g++ analyzer.cpp ast.cpp database.cpp executor.cpp main.cpp parser.cpp planner.cpp tokenizer.cpp command_handlers.cpp -std=c++17 -Wall -Wextra -g -o done3
+g++ analyzer.cpp ast.cpp database.cpp executor.cpp main.cpp parser.cpp planner.cpp tokenizer.cpp command_handlers.cpp storage.cpp -std=c++17 -Wall -Wextra -g -o ash4
 if [ $? -ne 0 ]; then
     echo "Compilation failed"
     exit 1
