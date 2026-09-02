@@ -1,260 +1,642 @@
-# Mini Query Execution Engine – Lightweight SQL Parser and Query Optimizer
+# MiniSQL – Custom SQL Query Engine
 
-Build a simplified SQL engine in C++ that accepts SQL queries, parses them, creates an execution plan, executes them on datasets, and visualizes the process through a React dashboard.
+MiniSQL is a lightweight SQL query execution engine built from scratch using **C++**, with a web-based frontend for executing and viewing SQL queries.
+
+The project implements the core stages of SQL query processing, including **lexical analysis, parsing, semantic analysis, query planning, query execution, and CSV-based storage**.
+
+The goal of the project is to understand how a database engine processes a SQL query internally rather than relying on an existing database system.
 
 ---
 
-# Day 1
+## Features
 
-Created a tokenizer that takes SQL queries as input and converts them into tokens.
+MiniSQL currently supports the following SQL operations and query-processing capabilities:
 
-It also handles case-insensitive SQL keywords using strict parsing rules, meaning terms like `select`, `SELECT`, and `SelEct` are treated the same and never cause confusion in the system.
+* `CREATE TABLE`
+* `INSERT`
+* `SELECT`
+* `UPDATE`
+* `DELETE`
+* `WHERE`
+* `GROUP BY`
+* `LIMIT`
+* Aggregate functions
+* Sorting using `ORDER BY`
+* Filtering
+* CSV-based persistent storage
 
-## Example
+The query engine is implemented through the following processing components:
 
-### Input
-```sql
-select * from abc where age >= 34;
-```
+* Lexer / Tokenizer
+* Parser
+* Abstract Syntax Tree (AST)
+* Semantic Analyzer
+* Query Planner
+* Query Executor
+* Storage Manager
 
-### Output
+A web-based frontend is also provided for interacting with the SQL engine.
+
+---
+
+## Architecture
+
 ```text
-SELECT  -> keyword
-*       -> operator
-FROM    -> keyword
-abc     -> identifier
-WHERE   -> keyword
-age     -> identifier
->=      -> operator
-34      -> digit
-;       -> semicolon
+                         ┌──────────────────┐
+                         │     Frontend     │
+                         │   Web Interface  │
+                         └────────┬─────────┘
+                                  │
+                                  │ SQL Query
+                                  ▼
+                         ┌──────────────────┐
+                         │     Backend      │
+                         └────────┬─────────┘
+                                  │
+                                  ▼
+                         ┌──────────────────┐
+                         │      Lexer       │
+                         │    Tokenizer     │
+                         └────────┬─────────┘
+                                  │
+                                Tokens
+                                  │
+                                  ▼
+                         ┌──────────────────┐
+                         │      Parser      │
+                         └────────┬─────────┘
+                                  │
+                                  ▼
+                         ┌──────────────────┐
+                         │       AST        │
+                         └────────┬─────────┘
+                                  │
+                                  ▼
+                     ┌────────────────────────┐
+                     │   Semantic Analyzer    │
+                     └───────────┬────────────┘
+                                 │
+                                 ▼
+                     ┌────────────────────────┐
+                     │     Query Planner      │
+                     └───────────┬────────────┘
+                                 │
+                                 ▼
+                     ┌────────────────────────┐
+                     │     Query Executor     │
+                     └───────────┬────────────┘
+                                 │
+                                 ▼
+                     ┌────────────────────────┐
+                     │    Storage Manager     │
+                     │     CSV Storage        │
+                     └───────────┬────────────┘
+                                 │
+                                 ▼
+                            Query Result
 ```
 
 ---
 
-# Day 2
+## Query Execution Pipeline
 
-Added parsing support for a simple `SELECT` query grammar.
-
-All generated tokens (stored as a `struct Token`) are inserted into a `vector`.  
-Each token contains a key-value pair representing the token type and token value.
-
-## Example Tokens
+A SQL query submitted through the frontend passes through multiple stages before the result is returned.
 
 ```text
-SELECT  -> keyword
-*       -> operator
-FROM    -> keyword
-abc     -> identifier
-WHERE   -> keyword
-age     -> identifier
->=      -> operator
-34      -> digit
-;       -> semicolon
+SQL Query
+    │
+    ▼
+Lexer / Tokenizer
+    │
+    ▼
+Parser
+    │
+    ▼
+AST
+    │
+    ▼
+Semantic Analyzer
+    │
+    ▼
+Query Planner
+    │
+    ▼
+Query Executor
+    │
+    ▼
+Storage Manager
+    │
+    ▼
+Query Result
 ```
 
-## Parser Functions
+### 1. Lexer
 
-### `parseSelect()`
+The lexer converts the SQL query into a sequence of tokens.
 
-A boolean function that checks whether the query starts with the `SELECT` keyword.
+For example:
 
-If valid, it moves the `pos` iterator forward by 1.
-
----
-
-### `parseColumns()`
-
-A boolean function that validates column names.
-
-- If the token is `*`, it sets:
-
-```cpp
-selectAllColumns = true;
+```sql
+SELECT name FROM students WHERE age > 18;
 ```
 
-- If the token is an identifier:
-  - Move the `pos` iterator forward.
-  - Check for `,` between column names.
-  - If a comma is missing where expected, return `false`.
-  - Otherwise, continue parsing the next identifier.
+is broken into tokens representing keywords, identifiers, operators, literals, and other SQL elements.
+
+```text
+SELECT
+IDENTIFIER(name)
+FROM
+IDENTIFIER(students)
+WHERE
+IDENTIFIER(age)
+GREATER_THAN
+NUMBER(18)
+```
 
 ---
 
-### `parseFrom()`
+### 2. Parser
 
-A boolean function that checks whether the query contains the `FROM` keyword.
+The parser consumes the tokens produced by the lexer and checks them against the supported SQL grammar.
 
-This helps identify the table name used in the query.
+It builds an **Abstract Syntax Tree (AST)** representing the structure of the SQL query.
+
+Conceptually:
+
+```text
+SELECT
+├── Columns
+│   └── name
+├── Table
+│   └── students
+└── WHERE
+    └── age > 18
+```
 
 ---
 
-### `parseWhere()`
+### 3. Abstract Syntax Tree
 
-A boolean function that checks whether the query contains the `WHERE` keyword.
+The AST provides a structured representation of the SQL query.
 
-This helps validate conditions applied to table columns.
+Instead of executing the raw SQL string directly, later stages operate on the parsed query representation.
+
+This separates SQL syntax handling from semantic validation and execution.
 
 ---
 
+### 4. Semantic Analysis
 
-# Day 3
+The semantic analyzer validates the parsed query before execution.
 
-Implemented a basic SQL SELECT query parser with syntax validation and structured query extraction.
+It checks the query against the available database schema and ensures that the requested operations are valid.
 
-## Features Added
+Examples include:
 
-- Parsing SELECT queries
-- Column list parsing
-  - `SELECT *`
-  - Multiple columns
-- FROM clause parsing
-- WHERE clause parsing
-  - Supports:
-    - `=`
-    - `==`
-    - `!=`
-    - `<`
-    - `>`
-    - `<=`
-    - `>=`
-- Structured query output
+* Checking whether referenced tables exist.
+* Checking whether referenced columns exist.
+* Validating query structure.
+* Validating operations against the available schema.
 
-## Example Supported Queries
+---
+
+### 5. Query Planning
+
+The query planner converts the validated query into an execution plan.
+
+For example:
 
 ```sql
-SELECT * FROM students;
+SELECT name
+FROM students
+WHERE age > 18
+LIMIT 5;
+```
 
-SELECT name, age FROM students;
+can conceptually be represented as:
 
-SELECT name FROM students WHERE age >= 18;
+```text
+Scan Table
+    │
+    ▼
+Filter age > 18
+    │
+    ▼
+Project name
+    │
+    ▼
+Limit 5
+```
 
-Parsed Query
-
-Columns:
-name
-age
-
-Table:
-students
-
-Condition:
-age >= 18
-
-#Day 4
-Implemented Abstract Syntax Tree (AST) generation for SQL queries.
-Refactored parser into modular architecture with tokenizer, parser, and AST files.
-Parser now directly builds tree-based query representations instead of storing flat parsed values.
-
-SELECT name, age FROM students WHERE age >= 18;
-
-TOKENS
-
-SELECT -> keyword
-name -> identifier
-, -> comma
-age -> identifier
-FROM -> keyword
-students -> identifier
-WHERE -> keyword
-age -> identifier
->= -> operator
-18 -> digit
-; -> semicolon
-
-PARSING RESULT
-
-Parsed Query
-
-AST TREE
-
-Query
-  Columns
-    Column: name
-    Column: age
-  Table: students
-  Comparison
-    Identifier: age
-    Operator: >=
-    Value: 18
-
-
-# Day 4 - Database Layer & Query Execution
-
-## Features Implemented
-
-### In-Memory Database
-Created:
-- `database.h`
-- `database.cpp`
-
-Added:
-- `Database`
-- `Table`
-- `Row`
-
-Sample table:
-
-| id | name  | age |
-|----|-------|-----|
-| 1  | Rahul | 20  |
-| 2  | Amit  | 16  |
-| 3  | Neha  | 22  |
+The query executor then processes these operations.
 
 ---
 
-### Executor Module
-Created:
-- `executor.h`
-- `executor.cpp`
+### 6. Query Execution
 
-Implemented:
-- SCAN
-- FILTER
-- PROJECT
-- formatted result output
+The query executor executes the generated query plan.
+
+Depending on the query, execution can involve:
+
+* Reading records.
+* Filtering records.
+* Sorting records.
+* Grouping records.
+* Performing aggregation.
+* Limiting results.
+* Inserting records.
+* Updating records.
+* Deleting records.
 
 ---
 
-## Supported Queries
+### 7. Storage Manager
+
+MiniSQL uses **CSV files as the persistent storage layer**.
+
+The Storage Manager handles reading and writing table data so that records can persist between executions.
+
+The query executor communicates with the storage layer when it needs to retrieve or modify table data.
+
+---
+
+# Supported SQL
+
+## CREATE TABLE
+
+Creates a table with a specified schema.
 
 ```sql
-SELECT name FROM students WHERE age >= 18;
-Supported operators:
+CREATE TABLE students (
+    id INT,
+    name VARCHAR,
+    age INT
+);
+```
 
->
-<
->=
-<=
-==
-!=
-Example Output
-RESULT
+---
 
-name
-----------------
-Rahul
-Neha
+## INSERT
 
-## Features Added
-
-- In-memory database layer
-- Query executor module
-- SCAN operation
-- FILTER operation
-- PROJECT operation
-- Result table printing
-- Multiple WHERE conditions
-- AND / OR support
-- String condition support
-
-## Supported Queries
+Adds records to a table.
 
 ```sql
-SELECT name FROM students WHERE age >= 18;
+INSERT INTO students VALUES (1, 'Alice', 20);
 
-SELECT name FROM students
-WHERE age >= 18 AND age < 25;
+INSERT INTO students VALUES (2, 'Bob', 22);
 
-SELECT name FROM students
-WHERE name == 'Rahul';
+INSERT INTO students VALUES (3, 'Charlie', 19);
+```
+
+---
+
+## SELECT
+
+Retrieves records from a table.
+
+```sql
+SELECT *
+FROM students;
+```
+
+Specific columns can also be selected:
+
+```sql
+SELECT name, age
+FROM students;
+```
+
+---
+
+## WHERE
+
+Filters records based on a condition.
+
+```sql
+SELECT name, age
+FROM students
+WHERE age >= 20;
+```
+
+Filtering can be used with other query operations such as sorting and limiting.
+
+---
+
+## GROUP BY
+
+Groups records based on one or more columns.
+
+For example:
+
+```sql
+SELECT age, COUNT(*)
+FROM students
+GROUP BY age;
+```
+
+`GROUP BY` can be combined with aggregate functions to perform calculations on groups of records.
+
+---
+
+## Aggregation
+
+MiniSQL supports aggregate operations for processing multiple records.
+
+Supported aggregate functions include:
+
+```text
+COUNT
+SUM
+AVG
+MIN
+MAX
+```
+
+Example:
+
+```sql
+SELECT COUNT(*)
+FROM students;
+```
+
+Another example using grouping:
+
+```sql
+SELECT age, COUNT(*)
+FROM students
+GROUP BY age;
+```
+
+---
+
+## Sorting
+
+Query results can be sorted using `ORDER BY`.
+
+```sql
+SELECT name, age
+FROM students
+ORDER BY age;
+```
+
+---
+
+## LIMIT
+
+`LIMIT` restricts the number of records returned by a query.
+
+```sql
+SELECT *
+FROM students
+LIMIT 2;
+```
+
+---
+
+## UPDATE
+
+Updates existing records.
+
+```sql
+UPDATE students
+SET age = 21
+WHERE id = 1;
+```
+
+---
+
+## DELETE
+
+Deletes records from a table.
+
+```sql
+DELETE FROM students
+WHERE id = 3;
+```
+
+---
+
+# Frontend
+
+MiniSQL includes a web-based frontend that provides an interface for interacting with the SQL engine.
+
+The frontend allows users to:
+
+* Write SQL queries.
+* Execute queries.
+* Send queries to the backend.
+* View query results.
+* View execution errors.
+
+The frontend communicates with the backend through the API layer.
+
+```text
+User
+ │
+ ▼
+SQL Editor
+ │
+ ▼
+Backend API
+ │
+ ▼
+MiniSQL Engine
+ │
+ ▼
+Query Result
+ │
+ ▼
+Frontend
+```
+
+---
+
+# Project Structure
+
+```text
+Mini-Query-Execution-Engine/
+│
+├── backend/
+│   ├── ...
+│   └── app.py
+│
+├── frontend/
+│   ├── src/
+│   ├── public/
+│   ├── package.json
+│   └── ...
+│
+├── data/
+│   └── ...
+│
+└── README.md
+```
+
+The backend contains the SQL engine and API, while the frontend provides the user interface for executing queries.
+
+---
+
+# Installation
+
+## Clone the Repository
+
+```bash
+git clone https://github.com/codingashutosh441-eng/Mini-Query-Execution-Engine.git
+
+cd Mini-Query-Execution-Engine
+```
+
+## Start Backend
+
+Open a terminal and run:
+
+```bash
+cd backend
+
+python app.py
+```
+
+The backend API will start and handle SQL requests from the frontend.
+
+## Start Frontend
+
+Open another terminal:
+
+```bash
+cd frontend
+
+npm install
+
+npm run dev
+```
+
+Open the local URL provided by the frontend development server in your browser.
+
+---
+
+# Example Workflow
+
+A typical MiniSQL workflow looks like this:
+
+### 1. Create a table
+
+```sql
+CREATE TABLE students (
+    id INT,
+    name VARCHAR,
+    age INT
+);
+```
+
+### 2. Insert records
+
+```sql
+INSERT INTO students VALUES (1, 'Alice', 20);
+INSERT INTO students VALUES (2, 'Bob', 22);
+INSERT INTO students VALUES (3, 'Charlie', 19);
+```
+
+### 3. Query the data
+
+```sql
+SELECT name, age
+FROM students
+WHERE age >= 20
+ORDER BY age
+LIMIT 2;
+```
+
+The query is processed as:
+
+```text
+SQL Query
+    ↓
+Lexer
+    ↓
+Parser
+    ↓
+AST
+    ↓
+Semantic Analysis
+    ↓
+Query Planning
+    ↓
+Query Execution
+    ↓
+CSV Storage
+    ↓
+Result
+```
+
+---
+
+# Technology Stack
+
+### Database Engine
+
+* C++
+* C++ STL
+* CSV-based storage
+
+### Backend
+
+* Python
+* Flask
+
+### Frontend
+
+* React
+* JavaScript
+* HTML
+* CSS
+
+---
+
+# Project Goals
+
+The main goal of MiniSQL is to understand database internals by implementing a simplified SQL engine from scratch.
+
+The project focuses on understanding how a database system:
+
+1. Receives a SQL query.
+2. Tokenizes the query.
+3. Parses the SQL grammar.
+4. Builds an AST.
+5. Validates the query semantically.
+6. Creates an execution plan.
+7. Executes the planned operations.
+8. Reads and modifies persistent data.
+9. Returns the final result.
+
+---
+
+# Current Limitations
+
+MiniSQL is an educational SQL engine and is not intended to be a production database system.
+
+The current implementation focuses on the SQL operations and query-processing capabilities listed in this README.
+
+Advanced database features such as transactions, concurrency control, crash recovery, distributed execution, and advanced query optimization are outside the current scope.
+
+---
+
+# Future Improvements
+
+Potential improvements include:
+
+* More SQL operations and expressions.
+* Improved query optimization.
+* Indexing.
+* Transaction support.
+* Concurrency control.
+* More advanced storage structures.
+* Query performance benchmarking.
+* Expanded automated testing.
+
+---
+
+# Status
+
+**Active Development**
+
+MiniSQL currently provides a functional SQL query engine with a multi-stage query-processing pipeline, CSV-based persistent storage, backend API, and web-based frontend.
